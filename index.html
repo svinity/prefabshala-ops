@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<title>Prefabshala Operations</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script>
+tailwind.config = {
+  darkMode:"class",
+  theme:{extend:{
+    colors:{
+      "bg":"#0f1418","sc":"#1b2024","scl":"#171c20","sch":"#252b2f","scx":"#30353a",
+      "sb":"#353a3e","ov":"#3e4850","ol":"#88929b",
+      "os":"#dee3e9","osv":"#bec8d2",
+      "pri":"#89ceff","on-pri":"#00344d","pri-c":"#0ea5e9",
+      "sec":"#4edea3","on-sec":"#003824",
+      "ter":"#ffb86e","on-ter":"#492900",
+      "err":"#ffb4ab","err-c":"#93000a","on-err":"#690005"
+    }
+  }}
+}
+</script>
+<style>
+*{-webkit-tap-highlight-color:transparent;}
+.ms{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;display:inline-block;line-height:1;font-family:'Material Symbols Outlined';text-transform:none;letter-spacing:normal;white-space:nowrap;}
+.ms.fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;}
+body{background:#0f1418;color:#dee3e9;font-family:'Inter',sans-serif;min-height:100dvh;}
+.mono{font-family:'JetBrains Mono',monospace;}
+::-webkit-scrollbar{display:none;}
+*{scrollbar-width:none;ms-overflow-style:none;}
+.page{display:none;padding-bottom:160px;}
+.page.active{display:block;}
+.tab-active{color:#89ceff;}
+.tab-active .ms{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;}
+details>summary{list-style:none;}
+details>summary::-webkit-details-marker{display:none;}
+.chevron{transition:transform .2s;}
+details[open] .chevron{transform:rotate(180deg);}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+.modal-bg.open{opacity:1;pointer-events:all;}
+.modal{background:#1b2024;border:1px solid #3e4850;border-radius:20px 20px 0 0;padding:20px 16px 36px;width:100%;max-width:480px;transform:translateY(100%);transition:transform .3s ease;max-height:85dvh;overflow-y:auto;}
+.modal-bg.open .modal{transform:translateY(0);}
+.inp{width:100%;background:#0f1418;border:1px solid #3e4850;border-radius:10px;padding:10px 12px;color:#dee3e9;font-family:'Inter',sans-serif;font-size:14px;outline:none;margin-bottom:10px;}
+.inp:focus{border-color:#89ceff;}
+.sel{width:100%;background:#0f1418;border:1px solid #3e4850;border-radius:10px;padding:10px 12px;color:#dee3e9;font-family:'Inter',sans-serif;font-size:14px;outline:none;margin-bottom:10px;}
+.btn-pri{width:100%;background:#89ceff;border:none;border-radius:12px;padding:13px;color:#00344d;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;}
+.btn-sec{width:100%;background:transparent;border:1px solid #3e4850;border-radius:12px;padding:12px;color:#bec8d2;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;margin-top:8px;}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#88929b;margin-bottom:6px;display:block;}
+.toast{position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-20px);background:#252b2f;border:1px solid #3e4850;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:500;z-index:500;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.chip-active{background:#89ceff;color:#00344d;border-color:#89ceff;}
+.chip-inactive{background:transparent;color:#88929b;border-color:#3e4850;}
+.card{background:#1b2024;border:1px solid rgba(255,255,255,.08);border-radius:16px;}
+.section-btn{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;cursor:pointer;transition:background .15s;}
+.section-btn:hover{background:#252b2f;}
+.item-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.item-row:last-child{border-bottom:none;}
+.toggle-track{width:44px;height:24px;background:#3e4850;border-radius:12px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;}
+.toggle-track.on{background:#4edea3;}
+.toggle-thumb{width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3);}
+.toggle-track.on .toggle-thumb{transform:translateX(20px);}
+.cal-cell{min-height:80px;padding:4px;border-right:1px solid rgba(255,255,255,.04);cursor:pointer;}
+.cal-cell:hover{background:rgba(137,206,255,.04);}
+.cal-cell.today-col{background:rgba(137,206,255,.05);}
+.cal-pill{font-size:9px;padding:2px 5px;border-radius:4px;margin-bottom:2px;display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden;}
+.emp-chip{font-size:11px;padding:4px 10px;border-radius:7px;border:1px solid;cursor:pointer;transition:all .15s;}
+.emp-chip.sel{border-color:#89ceff;background:rgba(137,206,255,.12);color:#89ceff;}
+.status-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;letter-spacing:.06em;text-transform:uppercase;}
+.prospect-card{background:#171c20;border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden;margin-bottom:12px;}
+</style>
+</head>
+<body class="dark">
+
+<!-- TOP BAR -->
+<header id="topbar" class="bg-sc sticky top-0 z-50 flex justify-between items-center px-4 border-b border-ov/30" style="height:56px;">
+  <div class="flex items-center gap-2">
+    <span class="ms fill text-pri">architecture</span>
+    <span class="font-bold text-os" style="font-size:16px;">Prefabshala Operations</span>
+  </div>
+  <button onclick="showToast('Notifications coming soon','info')" class="p-2 rounded-full hover:bg-sb">
+    <span class="ms text-osv">notifications</span>
+  </button>
+</header>
+
+<!-- ═══════════════ PAGE: SITES ═══════════════ -->
+<div id="page-sites" class="page active">
+  <!-- HUD Stats -->
+  <div class="grid grid-cols-3 gap-3 px-4 pt-4">
+    <div class="card p-3">
+      <div class="lbl" style="margin-bottom:2px;">Active Sites</div>
+      <div id="hud-sites" class="text-pri font-bold mono" style="font-size:22px;">—</div>
+    </div>
+    <div class="card p-3">
+      <div class="lbl" style="margin-bottom:2px;">Open Tasks</div>
+      <div id="hud-tasks" class="text-sec font-bold mono" style="font-size:22px;">—</div>
+    </div>
+    <div class="card p-3">
+      <div class="lbl" style="margin-bottom:2px;color:#ffb4ab;">Overdue</div>
+      <div id="hud-overdue" class="font-bold mono" style="font-size:22px;color:#ffb4ab;">—</div>
+    </div>
+  </div>
+
+  <!-- Site chips -->
+  <div class="flex gap-2 px-4 py-3 overflow-x-auto" id="siteChips"></div>
+
+  <!-- Site detail -->
+  <div id="siteDetail" class="px-4"></div>
+
+  <!-- Add site -->
+  <div class="px-4 pb-4">
+    <button onclick="openModal('modalAddSite')" class="w-full border border-dashed border-ov rounded-xl py-3 text-osv text-sm font-semibold flex items-center justify-center gap-2 hover:border-pri hover:text-pri transition-colors mt-2">
+      <span class="ms" style="font-size:18px;">add</span> Add New Site
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE: FACTORY ═══════════════ -->
+<div id="page-factory" class="page">
+  <div class="px-4 pt-4">
+    <!-- Finance summary -->
+    <div class="grid grid-cols-3 gap-3 mb-4" id="factFinance">
+      <div class="card p-3"><div class="lbl mb-1">Expense</div><div id="fact-exp" class="mono font-bold" style="color:#ffb4ab;font-size:18px;">₹0</div></div>
+      <div class="card p-3"><div class="lbl mb-1">Received</div><div id="fact-rec" class="mono font-bold text-sec" style="font-size:18px;">₹0</div></div>
+      <div class="card p-3"><div class="lbl mb-1">Balance</div><div id="fact-bal" class="mono font-bold text-pri" style="font-size:18px;">₹0</div></div>
+    </div>
+
+    <!-- Factory Tasks -->
+    <div class="card mb-3" id="factTasksCard">
+      <details open>
+        <summary class="section-btn">
+          <div class="flex items-center gap-2"><span class="ms text-pri">precision_manufacturing</span><span class="font-semibold">Factory Tasks</span></div>
+          <span class="ms osv chevron">expand_more</span>
+        </summary>
+        <div class="px-4 pb-4" id="factTasksList"></div>
+      </details>
+    </div>
+
+    <!-- Factory Purchases -->
+    <div class="card mb-3">
+      <details open>
+        <summary class="section-btn">
+          <div class="flex items-center gap-2"><span class="ms text-sec">shopping_cart</span><span class="font-semibold">Purchases</span></div>
+          <span class="ms osv chevron">expand_more</span>
+        </summary>
+        <div class="px-4 pb-4" id="factPurchasesList"></div>
+      </details>
+    </div>
+
+    <!-- Stock -->
+    <div class="card mb-3">
+      <details open>
+        <summary class="section-btn">
+          <div class="flex items-center gap-2"><span class="ms text-ter">inventory_2</span><span class="font-semibold">Stock</span></div>
+          <span class="ms osv chevron">expand_more</span>
+        </summary>
+        <div class="px-4 pb-4" id="factStockList"></div>
+      </details>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE: CALENDAR ═══════════════ -->
+<div id="page-calendar" class="page">
+  <div class="px-4 pt-4">
+    <!-- View toggle -->
+    <div class="flex bg-scl rounded-xl p-1 mb-4 gap-1">
+      <button id="cal-view-site" onclick="setCalView('site')" class="flex-1 py-2 rounded-lg font-semibold text-sm transition-all bg-pri-c text-white">Site View</button>
+      <button id="cal-view-person" onclick="setCalView('person')" class="flex-1 py-2 rounded-lg font-semibold text-sm transition-all text-osv">Person View</button>
+    </div>
+    <!-- Week nav -->
+    <div class="flex justify-between items-center mb-4">
+      <div>
+        <div id="calWeekLabel" class="font-bold text-os" style="font-size:17px;"></div>
+        <div id="calWeekSub" class="text-osv mono" style="font-size:10px;letter-spacing:.05em;"></div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="changeWeek(-1)" class="w-10 h-10 border border-ov rounded-lg flex items-center justify-center hover:bg-sb"><span class="ms">chevron_left</span></button>
+        <button onclick="changeWeek(0)" class="px-3 h-10 border border-pri/40 rounded-lg text-pri text-sm font-semibold hover:bg-pri/10">Today</button>
+        <button onclick="changeWeek(1)" class="w-10 h-10 border border-ov rounded-lg flex items-center justify-center hover:bg-sb"><span class="ms">chevron_right</span></button>
+      </div>
+    </div>
+    <!-- Calendar grid container -->
+    <div class="overflow-x-auto -mx-4">
+      <div id="calGrid" style="min-width:600px;padding:0 16px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE: PROSPECTS ═══════════════ -->
+<div id="page-prospects" class="page">
+  <div class="px-4 pt-4 flex justify-between items-center mb-4">
+    <span class="font-bold text-os" style="font-size:18px;">Prospect Visits</span>
+    <button onclick="openModal('modalAddVisit')" class="flex items-center gap-1 bg-pri text-on-pri px-4 py-2 rounded-full text-sm font-bold hover:opacity-80">
+      <span class="ms" style="font-size:16px;">add</span>Add Visit
+    </button>
+  </div>
+  <div id="prospectsList" class="px-4"></div>
+</div>
+
+<!-- ═══════════════ PAGE: SETTINGS ═══════════════ -->
+<div id="page-settings" class="page">
+  <div class="px-4 pt-4 space-y-5">
+
+    <!-- AI Config -->
+    <div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="ms fill text-pri">auto_awesome</span>
+        <span class="font-bold text-os" style="font-size:16px;">AI Chat</span>
+      </div>
+      <div class="card p-4">
+        <label class="lbl">AI Provider</label>
+        <select class="sel mb-3" id="set-provider" onchange="saveAISettings()">
+          <option value="openai">OpenAI (ChatGPT)</option>
+          <option value="claude">Anthropic (Claude)</option>
+        </select>
+        <label class="lbl">API Key</label>
+        <div class="relative mb-1">
+          <input id="set-apikey" type="password" class="inp mb-0 pr-10" placeholder="sk-..." oninput="saveAISettings()" style="margin-bottom:0;"/>
+          <button type="button" onclick="toggleKeyVis()" class="absolute right-3 top-1/2 -translate-y-1/2 text-osv"><span class="ms" style="font-size:18px;">visibility</span></button>
+        </div>
+        <div id="ai-status-msg" class="text-xs text-osv mt-2 mono">No key saved</div>
+      </div>
+    </div>
+
+    <!-- Employees -->
+    <div>
+      <div class="flex justify-between items-center mb-3">
+        <div class="flex items-center gap-2"><span class="ms text-osv">badge</span><span class="font-bold text-os" style="font-size:16px;">Employees</span></div>
+        <button onclick="openModal('modalAddEmployee')" class="text-pri text-sm font-semibold flex items-center gap-1"><span class="ms" style="font-size:16px;">person_add</span>Add</button>
+      </div>
+      <div id="settingsEmpList" class="space-y-2"></div>
+    </div>
+
+    <!-- Sites -->
+    <div>
+      <div class="flex justify-between items-center mb-3">
+        <div class="flex items-center gap-2"><span class="ms text-osv">foundation</span><span class="font-bold text-os" style="font-size:16px;">Sites</span></div>
+        <button onclick="openModal('modalAddSite')" class="text-pri text-sm font-semibold flex items-center gap-1"><span class="ms" style="font-size:16px;">add</span>Add</button>
+      </div>
+      <div id="settingsSiteList" class="space-y-2"></div>
+    </div>
+
+    <!-- Stock master list -->
+    <div>
+      <div class="flex justify-between items-center mb-3">
+        <div class="flex items-center gap-2"><span class="ms text-osv">inventory_2</span><span class="font-bold text-os" style="font-size:16px;">Stock Items</span></div>
+        <button onclick="openModal('modalAddStock')" class="text-pri text-sm font-semibold flex items-center gap-1"><span class="ms" style="font-size:16px;">add</span>Add</button>
+      </div>
+      <div id="settingsStockList" class="space-y-2"></div>
+    </div>
+
+    <!-- About -->
+    <div class="card p-5 text-center mb-4">
+      <div class="flex justify-center items-center gap-2 mb-2">
+        <span class="ms fill text-pri" style="font-size:32px;">architecture</span>
+        <span class="font-bold text-os" style="font-size:20px;">Prefabshala</span>
+      </div>
+      <div class="text-osv mono text-xs tracking-widest uppercase">Operations Suite v2.0</div>
+      <div class="text-osv text-xs mt-2 italic">Built for precision. Engineered for scale.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ AI CHAT BAR ═══════════════ -->
+<div id="chatBar" class="fixed z-40 left-0 right-0" style="bottom:72px;padding:0 16px 8px;">
+  <!-- AI response bubble -->
+  <div id="aiResponse" style="display:none;" class="card mb-2 p-3 text-sm border-l-4" style="border-left-color:#89ceff;">
+    <div class="flex justify-between items-start gap-2">
+      <span id="aiResponseText" class="text-osv leading-relaxed flex-1"></span>
+      <button onclick="document.getElementById('aiResponse').style.display='none'" class="ms text-osv flex-shrink-0" style="font-size:16px;">close</button>
+    </div>
+  </div>
+  <div class="card flex items-center px-4 gap-3" style="height:48px;border-color:rgba(137,206,255,.3);">
+    <span class="ms fill text-pri">auto_awesome</span>
+    <input id="chatInput" class="bg-transparent border-none flex-1 text-sm text-os placeholder-osv outline-none" placeholder="Tell me what happened today..." onkeydown="if(event.key==='Enter')sendChat()"/>
+    <button id="chatSendBtn" onclick="sendChat()" class="text-pri hover:opacity-70 transition-opacity">
+      <span class="ms">send</span>
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════ BOTTOM NAV ═══════════════ -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center border-t border-ov/30" style="height:72px;background:rgba(27,32,36,.92);backdrop-filter:blur(16px);">
+  <button onclick="showPage('sites')" id="nav-sites" class="flex flex-col items-center gap-0.5 px-3 py-2 tab-active">
+    <span class="ms">foundation</span><span class="mono" style="font-size:9px;letter-spacing:.05em;">SITES</span>
+  </button>
+  <button onclick="showPage('factory')" id="nav-factory" class="flex flex-col items-center gap-0.5 px-3 py-2 text-osv">
+    <span class="ms">factory</span><span class="mono" style="font-size:9px;letter-spacing:.05em;">FACTORY</span>
+  </button>
+  <button onclick="showPage('calendar')" id="nav-calendar" class="flex flex-col items-center gap-0.5 px-3 py-2 text-osv">
+    <span class="ms">calendar_today</span><span class="mono" style="font-size:9px;letter-spacing:.05em;">CALENDAR</span>
+  </button>
+  <button onclick="showPage('prospects')" id="nav-prospects" class="flex flex-col items-center gap-0.5 px-3 py-2 text-osv">
+    <span class="ms">group</span><span class="mono" style="font-size:9px;letter-spacing:.05em;">PROSPECTS</span>
+  </button>
+  <button onclick="showPage('settings')" id="nav-settings" class="flex flex-col items-center gap-0.5 px-3 py-2 text-osv">
+    <span class="ms">settings</span><span class="mono" style="font-size:9px;letter-spacing:.05em;">SETTINGS</span>
+  </button>
+</nav>
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Add Site -->
+<div class="modal-bg" id="modalAddSite">
+<div class="modal">
+  <div class="flex justify-between items-center mb-4"><span class="font-bold text-lg text-os">Add New Site</span><button onclick="closeModal('modalAddSite')" class="ms text-osv">close</button></div>
+  <label class="lbl">Site Name</label><input class="inp" id="as-name" placeholder="e.g. Gurgaon Sector 45"/>
+  <label class="lbl">Status</label>
+  <select class="sel" id="as-status">
+    <option value="active">Active</option><option value="hold">On Hold</option><option value="done">Done</option>
+  </select>
+  <label class="lbl">Deadline</label><input class="inp" id="as-deadline" type="date"/>
+  <label class="lbl">Color</label>
+  <div class="flex gap-3 mb-3 flex-wrap" id="as-colors">
+    <div onclick="selectColor(this,'#89ceff')" class="w-8 h-8 rounded-full cursor-pointer border-2 border-transparent" style="background:#89ceff;"></div>
+    <div onclick="selectColor(this,'#4edea3')" class="w-8 h-8 rounded-full cursor-pointer border-2 border-transparent" style="background:#4edea3;"></div>
+    <div onclick="selectColor(this,'#ffb86e')" class="w-8 h-8 rounded-full cursor-pointer border-2 border-transparent" style="background:#ffb86e;"></div>
+    <div onclick="selectColor(this,'#f472b6')" class="w-8 h-8 rounded-full cursor-pointer border-2 border-transparent" style="background:#f472b6;"></div>
+    <div onclick="selectColor(this,'#a78bfa')" class="w-8 h-8 rounded-full cursor-pointer border-2 border-transparent" style="background:#a78bfa;"></div>
+    <div onclick="selectColor(this,'#fb923c')" class="w-8 h-8 rounded-full cursor-pointer border-2 border-transparent" style="background:#fb923c;"></div>
+  </div>
+  <input type="hidden" id="as-color" value="#89ceff"/>
+  <button class="btn-pri" onclick="submitAddSite()">Create Site</button>
+</div>
+</div>
+
+<!-- Add Item (Task/Purchase) -->
+<div class="modal-bg" id="modalAddItem">
+<div class="modal">
+  <div class="flex justify-between items-center mb-4"><span id="addItemTitle" class="font-bold text-lg text-os">Add Item</span><button onclick="closeModal('modalAddItem')" class="ms text-osv">close</button></div>
+  <input type="hidden" id="ai-site-id"/>
+  <input type="hidden" id="ai-item-type"/>
+  <label class="lbl">Description</label><input class="inp" id="ai-title" placeholder="What needs to be done?"/>
+  <label class="lbl">Due Date</label><input class="inp" id="ai-date" type="date"/>
+  <label class="lbl">Assign To</label>
+  <div class="flex flex-wrap gap-2 mb-3" id="ai-emp-grid"></div>
+  <input type="hidden" id="ai-assigned"/>
+  <div id="ai-purchase-fields" style="display:none;">
+    <label class="lbl">Vendor</label><input class="inp" id="ai-vendor" placeholder="Vendor name"/>
+    <label class="lbl">Amount (₹)</label><input class="inp" id="ai-amount" type="number" placeholder="0"/>
+  </div>
+  <button class="btn-pri" onclick="submitAddItem()">Add</button>
+</div>
+</div>
+
+<!-- Add Employee -->
+<div class="modal-bg" id="modalAddEmployee">
+<div class="modal">
+  <div class="flex justify-between items-center mb-4"><span class="font-bold text-lg text-os">Add Team Member</span><button onclick="closeModal('modalAddEmployee')" class="ms text-osv">close</button></div>
+  <label class="lbl">Name</label><input class="inp" id="ae-name" placeholder="Full name"/>
+  <label class="lbl">Type</label>
+  <select class="sel" id="ae-type"><option value="permanent">Permanent</option><option value="temporary">Temporary</option></select>
+  <button class="btn-pri" onclick="submitAddEmployee()">Add Member</button>
+</div>
+</div>
+
+<!-- Add Visit -->
+<div class="modal-bg" id="modalAddVisit">
+<div class="modal">
+  <div class="flex justify-between items-center mb-4"><span class="font-bold text-lg text-os">Add Prospect Visit</span><button onclick="closeModal('modalAddVisit')" class="ms text-osv">close</button></div>
+  <label class="lbl">Client Name</label><input class="inp" id="av-name" placeholder="Client name"/>
+  <label class="lbl">Visit Date</label><input class="inp" id="av-date" type="date"/>
+  <label class="lbl">Site Interest</label>
+  <select class="sel" id="av-site"><option value="">No specific site</option></select>
+  <label class="lbl">Notes</label><input class="inp" id="av-notes" placeholder="What's this visit about?"/>
+  <button class="btn-pri" onclick="submitAddVisit()">Add Visit</button>
+</div>
+</div>
+
+<!-- Add Stock Item -->
+<div class="modal-bg" id="modalAddStock">
+<div class="modal">
+  <div class="flex justify-between items-center mb-4"><span class="font-bold text-lg text-os">Add Stock Item</span><button onclick="closeModal('modalAddStock')" class="ms text-osv">close</button></div>
+  <label class="lbl">Item Name</label><input class="inp" id="sk-name" placeholder="e.g. PUF Sheet"/>
+  <label class="lbl">Unit</label><input class="inp" id="sk-unit" placeholder="e.g. sqm, kg, pcs"/>
+  <label class="lbl">Current Quantity</label><input class="inp" id="sk-qty" type="number" placeholder="0"/>
+  <button class="btn-pri" onclick="submitAddStock()">Add Item</button>
+</div>
+</div>
+
+<!-- Assign Employee to Calendar -->
+<div class="modal-bg" id="modalAssign">
+<div class="modal">
+  <div class="flex justify-between items-center mb-4">
+    <span id="assignTitle" class="font-bold text-lg text-os">Assign Worker</span>
+    <button onclick="closeModal('modalAssign')" class="ms text-osv">close</button>
+  </div>
+  <input type="hidden" id="assign-site-id"/>
+  <input type="hidden" id="assign-date"/>
+  <label class="lbl">Select Employees</label>
+  <div class="flex flex-wrap gap-2 mb-4" id="assign-emp-grid"></div>
+  <button class="btn-pri" onclick="submitAssign()">Save Assignment</button>
+</div>
+</div>
+
+<!-- Finance Entry -->
+<div class="modal-bg" id="modalFinance">
+<div class="modal">
+  <div class="flex justify-between items-center mb-4"><span class="font-bold text-lg text-os">Add Finance Entry</span><button onclick="closeModal('modalFinance')" class="ms text-osv">close</button></div>
+  <input type="hidden" id="fin-site-id"/>
+  <label class="lbl">Type</label>
+  <select class="sel" id="fin-type"><option value="expense">Expense</option><option value="received">Received / Sale</option></select>
+  <label class="lbl">Description</label><input class="inp" id="fin-desc" placeholder="What is this for?"/>
+  <label class="lbl">Amount (₹)</label><input class="inp" id="fin-amount" type="number" placeholder="0"/>
+  <button class="btn-pri" onclick="submitFinance()">Add Entry</button>
+</div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<!-- ═══════════════ SCRIPT ═══════════════ -->
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbzine3av_bcTsIFPlxmVPS5pJihu-kf0ijUzt_wHvu_ssP7YPY4TjLyHkP_0AY58x9yzQ/exec';
+
+let sites=[], employees=[], items=[], visits=[], assignments=[], stockItems=[], financeEntries=[];
+let activeSiteId=null, calWeekOffset=0, calView='site';
+let selectedCalEmps=[], assigningSiteId=null, assigningDate=null;
+let selectedColor='#89ceff';
+let aiProvider = localStorage.getItem('pf_provider')||'openai';
+let aiKey = localStorage.getItem('pf_key')||'';
+
+// ── GOOGLE APPS SCRIPT API ──
+async function api(method, table, opts={}) {
+  if (method === 'GET') {
+    const params = new URLSearchParams({table});
+    if (opts.filter) params.append('filter', JSON.stringify(opts.filter));
+    const r = await fetch(`${API_URL}?${params}`);
+    if (!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    return Array.isArray(d) ? d : (d.data || []);
+  } else {
+    const body = {table, action: opts.action||'insert', ...opts};
+    const r = await fetch(API_URL, {
+      method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    const result = d.data !== undefined ? d.data : d;
+    return Array.isArray(result) ? result : [result];
+  }
+}
+
+// ── LOAD ──
+async function loadAll() {
+  try {
+    [sites, employees, items, visits, assignments] = await Promise.all([
+      api('GET','sites'),
+      api('GET','employees'),
+      api('GET','items'),
+      api('GET','visits'),
+      api('GET','assignments')
+    ]);
+    try { stockItems = await api('GET','stock_items'); } catch(e){ stockItems=[]; }
+    try { financeEntries = await api('GET','finance_entries'); } catch(e){ financeEntries=[]; }
+    
+    updateHUD();
+    renderSiteChips();
+    if (sites.length>0){ activeSiteId=activeSiteId||sites.filter(s=>s.type!=='factory')[0]?.id; renderSiteDetail(); }
+    renderFactory();
+    renderProspects();
+    renderSettingsEmployees();
+    renderSettingsSites();
+    renderSettingsStock();
+    renderCalendar();
+  } catch(e) { showToast('Failed to load data','error'); console.error(e); }
+}
+
+// ── HELPERS ──
+const todayStr = () => new Date().toISOString().split('T')[0];
+const today = new Date(); today.setHours(0,0,0,0);
+
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('en-IN',{day:'numeric',month:'short',weekday:'short'});
+}
+function dateStatus(d) {
+  if (!d) return 'upcoming';
+  const dt = new Date(d+'T00:00:00'); dt.setHours(0,0,0,0);
+  const diff = (dt-today)/86400000;
+  if (diff<0) return 'overdue';
+  if (diff===0) return 'today';
+  return 'upcoming';
+}
+function dateBadge(d,status) {
+  const s = status==='done' ? 'done' : dateStatus(d);
+  const cfg = {overdue:'background:rgba(255,180,171,.12);color:#ffb4ab;border:1px solid rgba(255,180,171,.3)',today:'background:rgba(255,184,110,.12);color:#ffb86e;border:1px solid rgba(255,184,110,.3)',upcoming:'background:rgba(255,255,255,.05);color:#88929b;border:1px solid #3e4850',done:'background:rgba(78,222,163,.1);color:#4edea3;border:1px solid rgba(78,222,163,.2)'};
+  return `<span class="mono" style="font-size:9px;padding:2px 7px;border-radius:4px;${cfg[s]}">${s==='done'?'DONE':d?fmtDate(d):'NO DATE'}</span>`;
+}
+function empColors(idx){const c=['#89ceff','#4edea3','#ffb86e','#f472b6','#a78bfa','#fb923c','#2dd4bf','#e879f9'];return c[idx%c.length];}
+function empInitial(name){return name?name.charAt(0).toUpperCase():'?';}
+
+// ── HUD ──
+function updateHUD() {
+  const nonFactory = sites.filter(s=>s.type!=='factory');
+  document.getElementById('hud-sites').textContent = nonFactory.filter(s=>s.status==='active').length;
+  const pending = items.filter(i=>i.status==='pending');
+  document.getElementById('hud-tasks').textContent = pending.length;
+  const ov = pending.filter(i=>dateStatus(i.due_date)==='overdue').length;
+  document.getElementById('hud-overdue').textContent = ov;
+}
+
+// ── NAV ──
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('nav button').forEach(b=>{ b.classList.remove('tab-active'); b.classList.add('text-osv'); });
+  const nb = document.getElementById('nav-'+name);
+  nb.classList.add('tab-active'); nb.classList.remove('text-osv');
+  if (name==='calendar') renderCalendar();
+  if (name==='settings') { renderSettingsEmployees(); renderSettingsSites(); renderSettingsStock(); }
+  // hide chat on settings
+  document.getElementById('chatBar').style.display = name==='settings' ? 'none' : '';
+}
+
+// ── SITE CHIPS ──
+function renderSiteChips() {
+  const nonFactory = sites.filter(s=>s.type!=='factory');
+  const c = document.getElementById('siteChips');
+  c.innerHTML = nonFactory.map(s=>`
+    <button onclick="selectSite('${s.id}')" class="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold transition-all ${s.id===activeSiteId?'chip-active':'chip-inactive'}">
+      <span class="w-2 h-2 rounded-full" style="background:${s.color||'#89ceff'}"></span>${s.name}
+    </button>`).join('') +
+    `<button onclick="openModal('modalAddSite')" class="flex-shrink-0 px-4 py-2 rounded-full border border-dashed border-ov text-osv text-sm">+ Add</button>`;
+}
+
+function selectSite(id) { activeSiteId=id; renderSiteChips(); renderSiteDetail(); }
+
+// ── SITE DETAIL ──
+function renderSiteDetail() {
+  const site = sites.find(s=>s.id===activeSiteId);
+  if (!site) { document.getElementById('siteDetail').innerHTML='<div class="text-center text-osv py-8">No site selected</div>'; return; }
+  const siteItems = items.filter(i=>i.site_id===activeSiteId);
+  const done = siteItems.filter(i=>i.status==='done').length;
+  const pct = siteItems.length ? Math.round(done/siteItems.length*100) : 0;
+  const daysLeft = site.deadline ? Math.ceil((new Date(site.deadline)-today)/86400000) : null;
+  const todayAssigned = assignments.filter(a=>a.site_id===activeSiteId&&a.work_date===todayStr()).map(a=>employees.find(e=>e.id===a.employee_id)).filter(Boolean);
+  const finForSite = financeEntries.filter(f=>f.site_id===activeSiteId);
+  const expense = finForSite.filter(f=>f.type==='expense').reduce((s,f)=>s+Number(f.amount),0);
+  const received = finForSite.filter(f=>f.type==='received').reduce((s,f)=>s+Number(f.amount),0);
+  const balance = received - expense;
+
+  const statusCfg = {active:'background:rgba(78,222,163,.12);color:#4edea3;border:1px solid rgba(78,222,163,.3)',hold:'background:rgba(255,184,110,.12);color:#ffb86e;border:1px solid rgba(255,184,110,.3)',done:'background:rgba(137,206,255,.12);color:#89ceff;border:1px solid rgba(137,206,255,.3)'};
+  
+  const sections = [
+    {key:'work', icon:'construction', label:'Tasks', color:'text-pri'},
+    {key:'purchase', icon:'shopping_cart', label:'Purchases', color:'text-sec'},
+  ];
+
+  document.getElementById('siteDetail').innerHTML = `
+    <div class="card mb-3">
+      <!-- Header -->
+      <div class="p-4 border-b" style="border-color:rgba(255,255,255,.08);">
+        <div class="flex justify-between items-start">
+          <div>
+            <div class="font-bold text-os mb-1" style="font-size:22px;">${site.name}</div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="status-badge" style="${statusCfg[site.status]||statusCfg.active}">${site.status.toUpperCase()}</span>
+              ${site.deadline?`<span class="mono text-xs text-osv flex items-center gap-1"><span class="ms" style="font-size:13px;">schedule</span>${fmtDate(site.deadline)} ${daysLeft!==null?`(${daysLeft}d left)`:''}</span>`:''}
+            </div>
+          </div>
+          <!-- Progress ring -->
+          <div class="relative flex-shrink-0" style="width:50px;height:50px;">
+            <svg width="50" height="50" viewBox="0 0 50 50" style="transform:rotate(-90deg);">
+              <circle cx="25" cy="25" r="20" fill="none" stroke="#3e4850" stroke-width="4"/>
+              <circle cx="25" cy="25" r="20" fill="none" stroke="${site.color||'#89ceff'}" stroke-width="4" stroke-linecap="round"
+                stroke-dasharray="125.6" stroke-dashoffset="${125.6-(125.6*pct/100)}"/>
+            </svg>
+            <div class="absolute inset-0 flex items-center justify-center mono font-bold" style="font-size:11px;">${pct}%</div>
+          </div>
+        </div>
+        <!-- Today's team -->
+        <div class="flex items-center gap-2 mt-3 flex-wrap">
+          <span class="mono text-osv" style="font-size:9px;letter-spacing:.1em;">TODAY:</span>
+          ${todayAssigned.map((e,i)=>`<span class="text-xs px-2 py-1 rounded-full font-semibold" style="background:${empColors(i)}22;color:${empColors(i)};border:1px solid ${empColors(i)}44;">${e.name}</span>`).join('')}
+          <button onclick="openAssign('${site.id}','${todayStr()}')" class="text-xs text-pri border border-dashed border-pri/40 px-2 py-1 rounded-full">+ Assign</button>
+        </div>
+      </div>
+
+      <!-- Tasks -->
+      <details open>
+        <summary class="section-btn">
+          <div class="flex items-center gap-2"><span class="ms text-pri">assignment</span><span class="font-semibold">Tasks</span><span class="mono text-xs text-osv ml-1">${siteItems.filter(i=>i.type==='work'&&i.status==='pending').length} open</span></div>
+          <span class="ms text-osv chevron">expand_more</span>
+        </summary>
+        <div class="px-4 pb-2">
+          ${renderItemList(siteItems.filter(i=>i.type==='work'),'work')}
+          <button onclick="openAddItemFor('${site.id}','work')" class="w-full border border-dashed border-ov rounded-lg py-2 text-osv text-sm flex items-center justify-center gap-1 mt-2 hover:border-pri hover:text-pri transition-colors">
+            <span class="ms" style="font-size:16px;">add</span>Add Task
+          </button>
+        </div>
+      </details>
+
+      <!-- Purchases -->
+      <details>
+        <summary class="section-btn" style="border-top:1px solid rgba(255,255,255,.06);">
+          <div class="flex items-center gap-2"><span class="ms text-sec">shopping_cart</span><span class="font-semibold">Purchases</span><span class="mono text-xs text-osv ml-1">${siteItems.filter(i=>i.type==='purchase'&&i.status==='pending').length} pending</span></div>
+          <span class="ms text-osv chevron">expand_more</span>
+        </summary>
+        <div class="px-4 pb-2">
+          ${renderItemList(siteItems.filter(i=>i.type==='purchase'),'purchase')}
+          <button onclick="openAddItemFor('${site.id}','purchase')" class="w-full border border-dashed border-ov rounded-lg py-2 text-osv text-sm flex items-center justify-center gap-1 mt-2 hover:border-sec hover:text-sec transition-colors">
+            <span class="ms" style="font-size:16px;">add</span>Add Purchase
+          </button>
+        </div>
+      </details>
+
+      <!-- Finance -->
+      <details>
+        <summary class="section-btn" style="border-top:1px solid rgba(255,255,255,.06);">
+          <div class="flex items-center gap-2"><span class="ms text-ter">payments</span><span class="font-semibold">Finance</span></div>
+          <span class="ms text-osv chevron">expand_more</span>
+        </summary>
+        <div class="p-4">
+          <div class="grid grid-cols-3 gap-2 mb-3">
+            <div class="card p-3"><div class="lbl mb-1">Expense</div><div class="mono font-bold" style="color:#ffb4ab;">₹${fmtMoney(expense)}</div></div>
+            <div class="card p-3"><div class="lbl mb-1">Received</div><div class="mono font-bold text-sec">₹${fmtMoney(received)}</div></div>
+            <div class="card p-3"><div class="lbl mb-1">Balance</div><div class="mono font-bold ${balance>=0?'text-pri':'text-err'}">₹${fmtMoney(Math.abs(balance))}</div></div>
+          </div>
+          ${finForSite.slice(-5).map(f=>`
+            <div class="flex justify-between items-center py-2 border-b" style="border-color:rgba(255,255,255,.04);font-size:12px;">
+              <span class="text-osv">${f.description||'—'}</span>
+              <span class="mono font-semibold ${f.type==='expense'?'text-err':'text-sec'}">${f.type==='expense'?'-':'+'} ₹${fmtMoney(Number(f.amount))}</span>
+            </div>`).join('')}
+          <button onclick="openFinance('${site.id}')" class="w-full border border-dashed border-ov rounded-lg py-2 text-osv text-sm flex items-center justify-center gap-1 mt-3 hover:border-ter hover:text-ter transition-colors">
+            <span class="ms" style="font-size:16px;">add</span>Add Entry
+          </button>
+        </div>
+      </details>
+
+      <!-- Stock -->
+      <details>
+        <summary class="section-btn" style="border-top:1px solid rgba(255,255,255,.06);">
+          <div class="flex items-center gap-2"><span class="ms" style="color:#89ceff;">inventory_2</span><span class="font-semibold">Stock</span></div>
+          <span class="ms text-osv chevron">expand_more</span>
+        </summary>
+        <div class="px-4 pb-4">
+          ${stockItems.length===0?'<div class="text-osv text-sm py-2">No stock items. Add in Settings.</div>':
+            stockItems.map(s=>`
+            <div class="flex justify-between items-center py-2 border-b" style="border-color:rgba(255,255,255,.04);">
+              <span class="text-sm text-os">${s.name}</span>
+              <div class="flex items-center gap-2">
+                <span class="mono text-xs text-osv">${s.quantity||0} ${s.unit||''}</span>
+                ${(s.quantity||0)<10?`<span class="mono" style="font-size:9px;background:rgba(255,180,171,.12);color:#ffb4ab;border:1px solid rgba(255,180,171,.3);padding:2px 6px;border-radius:4px;">LOW</span>`:''}
+              </div>
+            </div>`).join('')}
+        </div>
+      </details>
+
+      <!-- Footer actions -->
+      <div class="p-4 flex gap-3" style="border-top:1px solid rgba(255,255,255,.06);">
+        <button onclick="archiveSite('${site.id}')" class="flex-1 py-2 border rounded-lg text-sm font-semibold text-err border-err/30 hover:bg-err/10 transition-colors">Archive Site</button>
+      </div>
+    </div>`;
+}
+
+function renderItemList(list, type) {
+  if (!list.length) return `<div class="text-osv text-sm py-2">No items yet.</div>`;
+  const sorted = [...list].sort((a,b)=>{
+    const ord={overdue:0,today:1,upcoming:2,done:3};
+    const sa=a.status==='done'?'done':dateStatus(a.due_date);
+    const sb=b.status==='done'?'done':dateStatus(b.due_date);
+    return (ord[sa]||2)-(ord[sb]||2);
+  });
+  return sorted.map(item=>`
+    <div class="item-row">
+      <button onclick="toggleItem('${item.id}','${item.status}')" class="flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all mt-0.5 ${item.status==='done'?'bg-sec border-sec':'border-pri'}" style="font-size:11px;">
+        ${item.status==='done'?'<span class="ms fill" style="font-size:14px;color:#003824;">check</span>':''}
+      </button>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm text-os ${item.status==='done'?'line-through text-osv':''} leading-snug">${item.title}</div>
+        <div class="flex items-center gap-2 mt-1 flex-wrap">
+          ${dateBadge(item.due_date, item.status)}
+          ${item.vendor?`<span class="mono text-xs text-osv">${item.vendor}</span>`:''}
+          ${item.amount?`<span class="mono text-xs" style="color:#ffb86e;">₹${fmtMoney(item.amount)}</span>`:''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function fmtMoney(n) {
+  if (n>=100000) return (n/100000).toFixed(1)+'L';
+  if (n>=1000) return (n/1000).toFixed(0)+'k';
+  return n.toString();
+}
+
+// ── FACTORY ──
+function renderFactory() {
+  const factSite = sites.find(s=>s.type==='factory');
+  const factItems = factSite ? items.filter(i=>i.site_id===factSite.id) : [];
+  const factFin = factSite ? financeEntries.filter(f=>f.site_id===factSite.id) : [];
+  const expense = factFin.filter(f=>f.type==='expense').reduce((s,f)=>s+Number(f.amount),0);
+  const received = factFin.filter(f=>f.type==='received').reduce((s,f)=>s+Number(f.amount),0);
+  document.getElementById('fact-exp').textContent='₹'+fmtMoney(expense);
+  document.getElementById('fact-rec').textContent='₹'+fmtMoney(received);
+  document.getElementById('fact-bal').textContent=(received-expense>=0?'+':'-')+'₹'+fmtMoney(Math.abs(received-expense));
+
+  const tasks = factItems.filter(i=>i.type==='work');
+  const purchases = factItems.filter(i=>i.type==='purchase');
+  const siteId = factSite?.id||'';
+
+  document.getElementById('factTasksList').innerHTML = renderItemList(tasks,'work') + `
+    <button onclick="openAddItemFor('${siteId}','work')" class="w-full border border-dashed border-ov rounded-lg py-2 text-osv text-sm flex items-center justify-center gap-1 mt-2 hover:border-pri hover:text-pri transition-colors">
+      <span class="ms" style="font-size:16px;">add</span>Add Task
+    </button>`;
+  document.getElementById('factPurchasesList').innerHTML = renderItemList(purchases,'purchase') + `
+    <button onclick="openAddItemFor('${siteId}','purchase')" class="w-full border border-dashed border-ov rounded-lg py-2 text-osv text-sm flex items-center justify-center gap-1 mt-2 hover:border-sec hover:text-sec transition-colors">
+      <span class="ms" style="font-size:16px;">add</span>Add Purchase
+    </button>`;
+  document.getElementById('factStockList').innerHTML = stockItems.length===0?'<div class="text-osv text-sm py-2">No stock items. Add in Settings.</div>':
+    stockItems.map(s=>`
+      <div class="flex justify-between items-center py-2 border-b" style="border-color:rgba(255,255,255,.04);">
+        <span class="text-sm text-os">${s.name}</span>
+        <span class="mono text-xs text-osv">${s.quantity||0} ${s.unit||''}</span>
+      </div>`).join('');
+}
+
+// ── CALENDAR ──
+let _calView = 'site';
+function setCalView(v) {
+  _calView=v;
+  document.getElementById('cal-view-site').className=`flex-1 py-2 rounded-lg font-semibold text-sm transition-all ${v==='site'?'bg-pri-c text-white':'text-osv'}`;
+  document.getElementById('cal-view-person').className=`flex-1 py-2 rounded-lg font-semibold text-sm transition-all ${v==='person'?'bg-pri-c text-white':'text-osv'}`;
+  renderCalendar();
+}
+
+function changeWeek(delta) {
+  if (delta===0) calWeekOffset=0;
+  else calWeekOffset+=delta;
+  renderCalendar();
+}
+
+function getWeekDays() {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const day = now.getDay(); // 0=Sun
+  const mon = new Date(now); mon.setDate(now.getDate()-(day===0?6:day-1)+(calWeekOffset*7));
+  return Array.from({length:7},(_,i)=>{ const d=new Date(mon); d.setDate(mon.getDate()+i); return d; });
+}
+
+function renderCalendar() {
+  const days = getWeekDays();
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dayNames=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const first=days[0],last=days[6];
+  document.getElementById('calWeekLabel').textContent=`${first.getDate()} ${months[first.getMonth()]} – ${last.getDate()} ${months[last.getMonth()]} ${last.getFullYear()}`;
+  document.getElementById('calWeekSub').textContent=`WEEK ${getWeekNum(first)}, ${first.getFullYear()}`;
+
+  const rows = _calView==='site'
+    ? sites.filter(s=>s.type!=='factory')
+    : employees;
+
+  const todayISO = todayStr();
+  
+  let html = `<div style="display:grid;grid-template-columns:90px repeat(7,1fr);border-bottom:1px solid rgba(255,255,255,.06);">
+    <div class="p-2"></div>
+    ${days.map((d,i)=>{
+      const iso=d.toISOString().split('T')[0];
+      const isToday=iso===todayISO;
+      return `<div class="p-2 text-center ${isToday?'text-pri':'text-osv'}">
+        <div class="mono" style="font-size:9px;letter-spacing:.06em;">${dayNames[i]}</div>
+        <div class="font-bold" style="font-size:15px;">${d.getDate()}</div>
+        ${isToday?'<div class="mono" style="font-size:7px;color:#89ceff;">TODAY</div>':''}
+      </div>`;}).join('')}
+  </div>`;
+
+  rows.forEach((row,ri)=>{
+    html+=`<div style="display:grid;grid-template-columns:90px repeat(7,1fr);border-bottom:1px solid rgba(255,255,255,.04);">
+      <div class="p-2 flex flex-col justify-center" style="background:#171c20;border-right:1px solid rgba(255,255,255,.06);">
+        <div class="mono" style="font-size:8px;letter-spacing:.08em;color:#89ceff;">${_calView==='site'?'SITE':'PERSON'}</div>
+        <div class="font-bold text-os" style="font-size:11px;">${row.name}</div>
+      </div>
+      ${days.map(d=>{
+        const iso=d.toISOString().split('T')[0];
+        const isToday=iso===todayISO;
+        let pills='';
+        if (_calView==='site') {
+          const dayAssignments=assignments.filter(a=>a.site_id===row.id&&a.work_date===iso);
+          const emps=dayAssignments.map(a=>employees.find(e=>e.id===a.employee_id)).filter(Boolean);
+          pills=emps.map((e,i)=>`<div class="cal-pill" style="background:${empColors(i)}22;color:${empColors(i)};border:1px solid ${empColors(i)}44;">
+            <span style="width:5px;height:5px;border-radius:50%;background:${empColors(i)};flex-shrink:0;display:inline-block;"></span>${e.name}
+          </div>`).join('');
+        } else {
+          const dayAssignments=assignments.filter(a=>a.employee_id===row.id&&a.work_date===iso);
+          const sitesForDay=dayAssignments.map(a=>sites.find(s=>s.id===a.site_id)).filter(Boolean);
+          pills=sitesForDay.map(s=>`<div class="cal-pill" style="background:${s.color||'#89ceff'}22;color:${s.color||'#89ceff'};border:1px solid ${(s.color||'#89ceff')}44;">
+            <span style="width:5px;height:5px;border-radius:50%;background:${s.color||'#89ceff'};flex-shrink:0;display:inline-block;"></span>${s.name}
+          </div>`).join('');
+        }
+        const siteIdForAssign = _calView==='site' ? row.id : null;
+        return `<div class="cal-cell ${isToday?'today-col':''}" onclick="openAssign('${siteIdForAssign}','${iso}')">
+          ${pills}
+          <div style="font-size:9px;color:#3e4850;margin-top:2px;">+</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  });
+
+  document.getElementById('calGrid').innerHTML=html;
+}
+
+function getWeekNum(d) {
+  const onejan = new Date(d.getFullYear(),0,1);
+  return Math.ceil((((d-onejan)/86400000)+onejan.getDay()+1)/7);
+}
+
+// ── PROSPECTS ──
+function renderProspects() {
+  const el=document.getElementById('prospectsList');
+  if (!visits.length){el.innerHTML='<div class="text-center text-osv py-8">No visits yet. Add one above.</div>';return;}
+  const statusCfg={
+    pending:'background:rgba(255,184,110,.12);color:#ffb86e;border:1px solid rgba(255,184,110,.3)',
+    scheduled:'background:rgba(255,184,110,.12);color:#ffb86e;border:1px solid rgba(255,184,110,.3)',
+    visited:'background:rgba(78,222,163,.12);color:#4edea3;border:1px solid rgba(78,222,163,.3)',
+    quoted:'background:rgba(137,206,255,.12);color:#89ceff;border:1px solid rgba(137,206,255,.3)',
+    won:'background:rgba(78,222,163,.12);color:#4edea3;border:1px solid rgba(78,222,163,.3)',
+    lost:'background:rgba(255,180,171,.12);color:#ffb4ab;border:1px solid rgba(255,180,171,.3)'
+  };
+  el.innerHTML=visits.map(v=>{
+    const site=sites.find(s=>s.id===v.site_id);
+    const sc=statusCfg[v.status]||statusCfg.pending;
+    return `<div class="prospect-card">
+      <div class="p-4">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <div class="font-bold text-os" style="font-size:17px;">${v.client_name}</div>
+            ${site?`<div class="text-xs text-osv flex items-center gap-1 mt-1"><span class="ms" style="font-size:13px;">location_on</span>${site.name}</div>`:''}
+          </div>
+          <span class="status-badge" style="${sc}">${v.status.toUpperCase()}</span>
+        </div>
+        ${v.visit_date?`<div class="flex items-center gap-1 text-pri mono text-xs mb-2"><span class="ms" style="font-size:13px;">calendar_today</span>${fmtDate(v.visit_date)}</div>`:''}
+        ${v.notes?`<div class="text-sm text-osv border-l-2 pl-3" style="border-color:#3e4850;">${v.notes}</div>`:''}
+        <div class="flex gap-2 mt-3 flex-wrap">
+          ${['scheduled','visited','quoted','won','lost'].map(s=>`<button onclick="updateVisitStatus('${v.id}','${s}')" class="text-xs px-3 py-1 rounded-full border font-semibold transition-all ${v.status===s?'bg-pri text-on-pri border-pri':'border-ov text-osv hover:border-pri hover:text-pri'}">${s.charAt(0).toUpperCase()+s.slice(1)}</button>`).join('')}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── SETTINGS ──
+function renderSettingsEmployees() {
+  const el=document.getElementById('settingsEmpList');
+  if (!employees.length){el.innerHTML='<div class="text-osv text-sm">No employees yet.</div>';return;}
+  el.innerHTML=employees.map((e,i)=>`
+    <div class="card px-4 py-3 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0" style="background:${empColors(i)}22;color:${empColors(i)};">${empInitial(e.name)}</div>
+      <div class="flex-1"><div class="font-semibold text-os text-sm">${e.name}</div><div class="mono text-xs text-osv">${e.type}</div></div>
+      <button onclick="removeEmployee('${e.id}')" class="ms text-osv hover:text-err transition-colors" style="font-size:20px;">delete</button>
+    </div>`).join('');
+}
+
+function renderSettingsSites() {
+  const el=document.getElementById('settingsSiteList');
+  const nonFact=sites.filter(s=>s.type!=='factory');
+  if (!nonFact.length){el.innerHTML='<div class="text-osv text-sm">No sites yet.</div>';return;}
+  el.innerHTML=nonFact.map(s=>`
+    <div class="card px-4 py-3 flex items-center gap-3">
+      <div class="w-3 h-3 rounded-full flex-shrink-0" style="background:${s.color||'#89ceff'};box-shadow:0 0 8px ${s.color||'#89ceff'};"></div>
+      <div class="flex-1"><div class="font-semibold text-os text-sm">${s.name}</div><div class="mono text-xs text-osv">${s.status}${s.deadline?' · '+fmtDate(s.deadline):''}</div></div>
+      <button onclick="archiveSite('${s.id}')" class="ms text-osv hover:text-err transition-colors" style="font-size:20px;">archive</button>
+    </div>`).join('');
+}
+
+function renderSettingsStock() {
+  const el=document.getElementById('settingsStockList');
+  if (!stockItems.length){el.innerHTML='<div class="text-osv text-sm">No stock items yet.</div>';return;}
+  el.innerHTML=stockItems.map(s=>`
+    <div class="card px-4 py-3 flex items-center gap-3">
+      <span class="ms text-osv">inventory_2</span>
+      <div class="flex-1"><div class="font-semibold text-os text-sm">${s.name}</div><div class="mono text-xs text-osv">${s.quantity||0} ${s.unit||''}</div></div>
+      <button onclick="removeStock('${s.id}')" class="ms text-osv hover:text-err" style="font-size:20px;">delete</button>
+    </div>`).join('');
+}
+
+// ── MODALS ──
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('open');}));
+
+function selectColor(el, color) {
+  selectedColor=color;
+  document.getElementById('as-color').value=color;
+  document.querySelectorAll('#as-colors div').forEach(d=>d.style.borderColor='transparent');
+  el.style.borderColor='#fff';
+}
+
+function openAddItemFor(siteId, type) {
+  document.getElementById('ai-site-id').value=siteId;
+  document.getElementById('ai-item-type').value=type;
+  document.getElementById('addItemTitle').textContent=type==='purchase'?'Add Purchase':'Add Task';
+  document.getElementById('ai-date').value=todayStr();
+  document.getElementById('ai-purchase-fields').style.display=type==='purchase'?'block':'none';
+  // Emp grid
+  const g=document.getElementById('ai-emp-grid');
+  g.innerHTML=employees.map((e,i)=>`<div class="emp-chip" style="color:${empColors(i)};border-color:${empColors(i)}44;" onclick="toggleItemEmp('${e.id}',this)">${e.name}</div>`).join('');
+  document.getElementById('ai-assigned').value='';
+  openModal('modalAddItem');
+}
+
+let selectedItemEmps=[];
+function toggleItemEmp(id, el) {
+  if (selectedItemEmps.includes(id)) { selectedItemEmps=selectedItemEmps.filter(x=>x!==id); el.classList.remove('sel'); }
+  else { selectedItemEmps.push(id); el.classList.add('sel'); }
+}
+
+function openAssign(siteId, date) {
+  assigningSiteId=siteId; assigningDate=date; selectedCalEmps=[];
+  document.getElementById('assignTitle').textContent=`Assign — ${fmtDate(date)}`;
+  const g=document.getElementById('assign-emp-grid');
+  const existing = assignments.filter(a=>a.site_id===siteId&&a.work_date===date).map(a=>a.employee_id);
+  g.innerHTML=employees.map((e,i)=>`<div class="emp-chip ${existing.includes(e.id)?'sel':''}" style="color:${empColors(i)};border-color:${empColors(i)}44;" onclick="toggleCalEmp('${e.id}',this)">${e.name}</div>`).join('');
+  selectedCalEmps=[...existing];
+  openModal('modalAssign');
+}
+
+function toggleCalEmp(id,el) {
+  if(selectedCalEmps.includes(id)){selectedCalEmps=selectedCalEmps.filter(x=>x!==id);el.classList.remove('sel');}
+  else{selectedCalEmps.push(id);el.classList.add('sel');}
+}
+
+function openFinance(siteId){document.getElementById('fin-site-id').value=siteId;openModal('modalFinance');}
+
+// ── SUBMIT ACTIONS ──
+async function submitAddSite() {
+  const name=document.getElementById('as-name').value.trim();
+  if (!name){showToast('Enter site name','error');return;}
+  try {
+    const [site]=await api('POST','sites',{action:'insert',data:{name,status:document.getElementById('as-status').value,deadline:document.getElementById('as-deadline').value||null,color:selectedColor}});
+    sites.push(site); closeModal('modalAddSite'); document.getElementById('as-name').value='';
+    activeSiteId=site.id; renderSiteChips(); renderSiteDetail(); renderSettingsSites();
+    showToast(name+' added ✓','success');
+  } catch(e){showToast('Failed: '+e.message,'error');}
+}
+
+async function submitAddItem() {
+  const title=document.getElementById('ai-title').value.trim();
+  if (!title){showToast('Enter a description','error');return;}
+  const siteId=document.getElementById('ai-site-id').value;
+  const type=document.getElementById('ai-item-type').value;
+  const body={site_id:siteId,type,title,due_date:document.getElementById('ai-date').value||null,status:'pending',vendor:document.getElementById('ai-vendor').value||null,amount:document.getElementById('ai-amount').value||null};
+  try {
+    const [item]=await api('POST','items',{action:'insert',data:body});
+    items.push(item); closeModal('modalAddItem'); document.getElementById('ai-title').value='';
+    renderSiteDetail(); renderFactory(); updateHUD();
+    showToast('Added ✓','success');
+  } catch(e){showToast('Failed: '+e.message,'error');}
+}
+
+async function submitAddEmployee() {
+  const name=document.getElementById('ae-name').value.trim();
+  if (!name){showToast('Enter a name','error');return;}
+  try {
+    const colors=['#89ceff','#4edea3','#ffb86e','#f472b6','#a78bfa','#fb923c'];
+    const [emp]=await api('POST','employees',{action:'insert',data:{name,type:document.getElementById('ae-type').value,color:colors[employees.length%colors.length]}});
+    employees.push(emp); closeModal('modalAddEmployee'); document.getElementById('ae-name').value='';
+    renderSettingsEmployees(); showToast(name+' added ✓','success');
+  } catch(e){showToast('Failed: '+e.message,'error');}
+}
+
+async function removeEmployee(id) {
+  try {
+    await api('POST','employees',{action:'delete',id});
+    employees=employees.filter(e=>e.id!==id); renderSettingsEmployees(); showToast('Removed','info');
+  } catch(e){showToast('Failed','error');}
+}
+
+async function submitAddVisit() {
+  const name=document.getElementById('av-name').value.trim();
+  if (!name){showToast('Enter client name','error');return;}
+  try {
+    const [v]=await api('POST','visits',{action:'insert',data:{client_name:name,visit_date:document.getElementById('av-date').value||null,site_id:document.getElementById('av-site').value||null,notes:document.getElementById('av-notes').value||null,status:'scheduled'}});
+    visits.push(v); closeModal('modalAddVisit'); document.getElementById('av-name').value='';
+    renderProspects(); showToast('Visit added ✓','success');
+  } catch(e){showToast('Failed: '+e.message,'error');}
+}
+
+async function updateVisitStatus(id, status) {
+  try {
+    await api('POST','visits',{action:'update',id,data:{status}});
+    const v=visits.find(x=>x.id===id); if(v) v.status=status;
+    renderProspects(); showToast('Updated ✓','success');
+  } catch(e){showToast('Failed','error');}
+}
+
+async function submitAddStock() {
+  const name=document.getElementById('sk-name').value.trim();
+  if (!name){showToast('Enter item name','error');return;}
+  try {
+    const [s]=await api('POST','stock_items',{action:'insert',data:{name,unit:document.getElementById('sk-unit').value||'pcs',quantity:Number(document.getElementById('sk-qty').value)||0}});
+    stockItems.push(s); closeModal('modalAddStock'); document.getElementById('sk-name').value='';
+    renderSettingsStock(); renderFactory(); renderSiteDetail(); showToast(name+' added ✓','success');
+  } catch(e){showToast('Failed: '+e.message,'error');}
+}
+
+async function removeStock(id) {
+  try {
+    await api('POST','stock_items',{action:'delete',id});
+    stockItems=stockItems.filter(s=>s.id!==id); renderSettingsStock();
+  } catch(e){showToast('Failed','error');}
+}
+
+async function submitAssign() {
+  if (!assigningSiteId){closeModal('modalAssign');return;}
+  try {
+    await api('POST','assignments',{action:'deleteFilter',filter:{site_id:assigningSiteId,work_date:assigningDate}});
+    assignments=assignments.filter(a=>!(a.site_id===assigningSiteId&&a.work_date===assigningDate));
+    for (const empId of selectedCalEmps) {
+      const [a]=await api('POST','assignments',{action:'insert',data:{site_id:assigningSiteId,employee_id:empId,work_date:assigningDate}});
+      if(a)assignments.push(a);
+    }
+    closeModal('modalAssign'); renderCalendar(); renderSiteDetail(); showToast('Assignment saved ✓','success');
+  } catch(e){showToast('Failed: '+e.message,'error');}
+}
+
+async function submitFinance() {
+  const amount=document.getElementById('fin-amount').value;
+  if (!amount){showToast('Enter amount','error');return;}
+  const siteId=document.getElementById('fin-site-id').value;
+  try {
+    const [f]=await api('POST','finance_entries',{action:'insert',data:{site_id:siteId,type:document.getElementById('fin-type').value,description:document.getElementById('fin-desc').value||'',amount:Number(amount)}});
+    financeEntries.push(f); closeModal('modalFinance'); document.getElementById('fin-amount').value=''; document.getElementById('fin-desc').value='';
+    renderSiteDetail(); renderFactory(); showToast('Entry added ✓','success');
+  } catch(e){showToast('Failed: '+e.message,'error');}
+}
+
+async function toggleItem(id, currentStatus) {
+  const newStatus=currentStatus==='done'?'pending':'done';
+  try {
+    await api('POST','items',{action:'update',id,data:{status:newStatus}});
+    const it=items.find(i=>i.id===id); if(it) it.status=newStatus;
+    renderSiteDetail(); renderFactory(); updateHUD();
+    showToast(newStatus==='done'?'Done ✓':'Reopened','success');
+  } catch(e){showToast('Failed','error');}
+}
+
+async function archiveSite(id) {
+  try {
+    await api('POST','sites',{action:'update',id,data:{status:'done'}});
+    const s=sites.find(x=>x.id===id); if(s) s.status='done';
+    renderSiteChips(); renderSiteDetail(); renderSettingsSites(); updateHUD(); showToast('Archived','info');
+  } catch(e){showToast('Failed','error');}
+}
+
+// ── SETTINGS: AI ──
+function saveAISettings() {
+  const key=document.getElementById('set-apikey').value.trim();
+  const provider=document.getElementById('set-provider').value;
+  aiKey=key; aiProvider=provider;
+  localStorage.setItem('pf_key',key);
+  localStorage.setItem('pf_provider',provider);
+  document.getElementById('ai-status-msg').textContent=key?'Key saved ✓':'No key saved';
+}
+function toggleKeyVis() {
+  const inp=document.getElementById('set-apikey');
+  inp.type=inp.type==='password'?'text':'password';
+}
+function loadAISettings() {
+  document.getElementById('set-apikey').value=aiKey;
+  document.getElementById('set-provider').value=aiProvider;
+  document.getElementById('ai-status-msg').textContent=aiKey?'Key saved ✓':'No key saved';
+}
+
+// ── AI CHAT ──
+async function sendChat() {
+  const input=document.getElementById('chatInput');
+  const msg=input.value.trim();
+  if (!msg) return;
+  if (!aiKey){showToast('Add API key in Settings','error');return;}
+
+  const btn=document.getElementById('chatSendBtn');
+  btn.innerHTML='<div class="ms" style="font-size:20px;animation:spin .8s linear infinite;display:inline-block;">refresh</div>';
+  input.value='';
+
+  const respEl=document.getElementById('aiResponse');
+  const respTxt=document.getElementById('aiResponseText');
+  respEl.style.display='block';
+  respTxt.textContent='⏳ Processing...';
+
+  const context = {
+    sites: sites.filter(s=>s.type!=='factory').map(s=>({id:s.id,name:s.name,status:s.status})),
+    factory: sites.find(s=>s.type==='factory'),
+    employees: employees.map(e=>({id:e.id,name:e.name})),
+    today: todayStr(),
+    pending_items: items.filter(i=>i.status==='pending').map(i=>({id:i.id,site_id:i.site_id,type:i.type,title:i.title,due_date:i.due_date}))
+  };
+
+  const systemPrompt=`You are a COO assistant for Prefabshala, a prefab construction company.
+Parse the user's natural language and return a JSON action to update the ops dashboard.
+
+Context: ${JSON.stringify(context)}
+
+Return ONLY valid JSON:
+{"action":"add_item|complete_item|add_site|add_visit|assign_employee|update_site_status|add_finance","data":{...},"message":"Human readable confirmation"}
+
+For add_item: {site_name, type ("work"|"purchase"), title, due_date (YYYY-MM-DD), vendor?, amount?}
+For complete_item: {item_title}
+For add_site: {name, status ("active"|"hold"), deadline?}
+For add_visit: {client_name, visit_date, notes?}
+For assign_employee: {employee_name, site_name, date}
+For update_site_status: {site_name, status}
+For add_finance: {site_name, type ("expense"|"received"), description, amount}
+
+Match names fuzzy. Infer "tomorrow"=next day, day names=upcoming day. Factory-related items go to factory site.`;
+
+  try {
+    let result;
+    if (aiProvider==='openai') {
+      const r=await fetch('https://api.openai.com/v1/chat/completions',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':`Bearer ${aiKey}`},
+        body:JSON.stringify({model:'gpt-4o-mini',messages:[{role:'system',content:systemPrompt},{role:'user',content:msg}],response_format:{type:'json_object'}})
+      });
+      const d=await r.json();
+      if(d.error) throw new Error(d.error.message);
+      result=JSON.parse(d.choices[0].message.content);
+    } else {
+      // Claude via proxy
+      const proxyUrl='https://corsproxy.io/?'+encodeURIComponent('https://api.anthropic.com/v1/messages');
+      const r=await fetch(proxyUrl,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':aiKey,'anthropic-version':'2023-06-01'},
+        body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,system:systemPrompt,messages:[{role:'user',content:msg}]})
+      });
+      const d=await r.json();
+      if(d.error) throw new Error(d.error.message||JSON.stringify(d.error));
+      const txt=d.content?.[0]?.text||'{}';
+      result=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    }
+
+    await executeAIAction(result);
+    respTxt.textContent='✓ '+result.message;
+    setTimeout(()=>{respEl.style.display='none';},4000);
+  } catch(e) {
+    respTxt.textContent='✗ '+e.message;
+    console.error(e);
+  }
+  btn.innerHTML='<span class="ms">send</span>';
+}
+
+async function executeAIAction({action,data}) {
+  const findSite = (name) => sites.find(s=>s.name.toLowerCase().includes((name||'').toLowerCase()));
+  const findEmp = (name) => employees.find(e=>e.name.toLowerCase().includes((name||'').toLowerCase()));
+  const resolveDate = (str) => {
+    if (!str) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    const d=new Date(str); return isNaN(d)?null:d.toISOString().split('T')[0];
+  };
+
+  if (action==='add_item') {
+    const site=findSite(data.site_name)||sites.find(s=>s.type!=='factory'&&s.status==='active')||sites[0];
+    if (!site){showToast('Site not found','error');return;}
+    const [item]=await api('POST','items',{action:'insert',data:{site_id:site.id,type:data.type||'work',title:data.title,due_date:resolveDate(data.due_date),status:'pending',vendor:data.vendor||null,amount:data.amount||null}});
+    items.push(item); renderSiteDetail(); renderFactory(); updateHUD();
+  }
+  else if (action==='complete_item') {
+    const item=items.find(i=>i.title.toLowerCase().includes((data.item_title||'').toLowerCase())&&i.status==='pending');
+    if (item){await api('POST','items',{action:'update',id:item.id,data:{status:'done'}});item.status='done';renderSiteDetail();renderFactory();updateHUD();}
+    else showToast('Item not found','error');
+  }
+  else if (action==='add_site') {
+    const [site]=await api('POST','sites',{action:'insert',data:{name:data.name,status:data.status||'active',deadline:resolveDate(data.deadline),color:'#89ceff'}});
+    sites.push(site); activeSiteId=site.id; renderSiteChips(); renderSiteDetail(); renderSettingsSites(); updateHUD();
+  }
+  else if (action==='add_visit') {
+    const [v]=await api('POST','visits',{action:'insert',data:{client_name:data.client_name,visit_date:resolveDate(data.visit_date),notes:data.notes||null,status:'scheduled'}});
+    visits.push(v); renderProspects();
+  }
+  else if (action==='assign_employee') {
+    const emp=findEmp(data.employee_name); const site=findSite(data.site_name);
+    if (emp&&site){const[a]=await api('POST','assignments',{action:'insert',data:{site_id:site.id,employee_id:emp.id,work_date:resolveDate(data.date)||todayStr()}});if(a)assignments.push(a);renderCalendar();renderSiteDetail();}
+  }
+  else if (action==='update_site_status') {
+    const site=findSite(data.site_name);
+    if (site){await api('POST','sites',{action:'update',id:site.id,data:{status:data.status}});site.status=data.status;renderSiteChips();renderSiteDetail();updateHUD();}
+  }
+  else if (action==='add_finance') {
+    const site=findSite(data.site_name)||sites[0];
+    if (site) try {
+      const[f]=await api('POST','finance_entries',{action:'insert',data:{site_id:site.id,type:data.type,description:data.description||'',amount:Number(data.amount)||0}});
+      financeEntries.push(f); renderSiteDetail(); renderFactory();
+    } catch(e){showToast('Finance entry failed','error');}
+  }
+}
+
+// ── TOAST ──
+function showToast(msg, type='info') {
+  const t=document.getElementById('toast');
+  const colors={success:'#4edea3',error:'#ffb4ab',info:'#89ceff'};
+  t.textContent=msg; t.style.color=colors[type]||colors.info; t.style.borderColor=(colors[type]||colors.info)+'44';
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ── ADD STYLE FOR SPIN ──
+const style=document.createElement('style');
+style.textContent='@keyframes spin{to{transform:rotate(360deg);}}';
+document.head.appendChild(style);
+
+// ── INIT ──
+window.addEventListener('DOMContentLoaded',()=>{
+  // populate visit site select when modal opens
+  document.getElementById('modalAddVisit').addEventListener('click',()=>{
+    const sel=document.getElementById('av-site');
+    sel.innerHTML='<option value="">No specific site</option>'+sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  });
+  loadAISettings();
+  loadAll();
+});
+</script>
+</body>
+</html>
