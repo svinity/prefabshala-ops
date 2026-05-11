@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 <script>
-tailwind.config = {
+tailwind.config = {h
   darkMode:"class",
   theme:{extend:{
     colors:{
@@ -479,12 +479,12 @@ const today = new Date(); today.setHours(0,0,0,0);
 
 function fmtDate(d) {
   if (!d) return '';
-  const dt = new Date(d+'T00:00:00');
+  const dt = new Date(d.includes('T') ? d.split('T')[0]+'T00:00:00' : d+'T00:00:00');
   return dt.toLocaleDateString('en-IN',{day:'numeric',month:'short',weekday:'short'});
 }
 function dateStatus(d) {
   if (!d) return 'upcoming';
-  const dt = new Date(d+'T00:00:00'); dt.setHours(0,0,0,0);
+  const dt = new Date(d.includes('T') ? d.split('T')[0]+'T00:00:00' : d+'T00:00:00'); dt.setHours(0,0,0,0);
   const diff = (dt-today)/86400000;
   if (diff<0) return 'overdue';
   if (diff===0) return 'today';
