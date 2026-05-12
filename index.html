@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 <script>
-tailwind.config = {h
+tailwind.config = {
   darkMode:"class",
   theme:{extend:{
     colors:{
@@ -879,7 +879,7 @@ function renderSettingsEmployees() {
     <div class="card px-4 py-3 flex items-center gap-3">
       <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0" style="background:${empColors(i)}22;color:${empColors(i)};">${empInitial(e.name)}</div>
       <div class="flex-1"><div class="font-semibold text-os text-sm">${e.name}</div><div class="mono text-xs text-osv">${e.type}</div></div>
-      <button onclick="openRename('employee','${e.id}','${e.name.replace(/'/g,'\\'')}')" class="ms text-osv hover:text-pri transition-colors mr-1" style="font-size:20px;" title="Rename">edit</button>
+      <button onclick="openRename('employee','${e.id}','${e.name}')" class="ms text-osv hover:text-pri transition-colors mr-1" style="font-size:20px;" title="Rename">edit</button>
       <button onclick="removeEmployee('${e.id}')" class="ms text-osv hover:text-err transition-colors" style="font-size:20px;" title="Delete">delete</button>
     </div>`).join('');
 }
@@ -895,7 +895,7 @@ function renderSettingsSites() {
     <div class="card px-4 py-3 flex items-center gap-3">
       <div class="w-3 h-3 rounded-full flex-shrink-0" style="background:${s.color||'#89ceff'};box-shadow:0 0 8px ${s.color||'#89ceff'};"></div>
       <div class="flex-1"><div class="font-semibold text-os text-sm">${s.name}</div><div class="mono text-xs text-osv">${s.status}${s.deadline?' · '+fmtDate(s.deadline):''}</div></div>
-      <button onclick="openRename('site','${s.id}','${s.name.replace(/'/g,'\\'')}')" class="ms text-osv hover:text-pri transition-colors mr-1" style="font-size:20px;" title="Rename">edit</button>
+      <button onclick="openRename('site','${s.id}','${s.name}')" class="ms text-osv hover:text-pri transition-colors mr-1" style="font-size:20px;" title="Rename">edit</button>
       <button onclick="archiveSite('${s.id}')" class="ms text-osv hover:text-err transition-colors" style="font-size:20px;" title="Mark Done">archive</button>
     </div>`).join('');
   if (!completed.length){el2.innerHTML='<div class="text-osv text-sm">No completed sites yet.</div>';}
