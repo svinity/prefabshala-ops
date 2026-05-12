@@ -71,6 +71,10 @@ details[open] .chevron{transform:rotate(180deg);}
 .emp-chip.sel{border-color:#89ceff;background:rgba(137,206,255,.12);color:#89ceff;}
 .status-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;letter-spacing:.06em;text-transform:uppercase;}
 .prospect-card{background:#171c20;border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden;margin-bottom:12px;}
+.swipe-wrap{position:relative;overflow:hidden;margin-bottom:0;}
+.swipe-del-bg{position:absolute;right:0;top:0;bottom:0;width:70px;background:#93000a;display:flex;align-items:center;justify-content:center;border-radius:0 8px 8px 0;pointer-events:none;}
+.swipe-face{background:transparent;transition:transform .22s ease;will-change:transform;position:relative;z-index:1;}
+.swipe-face.swiped{transform:translateX(-70px);}
 </style>
 </head>
 <body class="dark">
@@ -244,6 +248,15 @@ details[open] .chevron{transform:rotate(180deg);}
       <div id="settingsSiteList" class="space-y-2"></div>
     </div>
 
+    <!-- Completed Sites -->
+    <div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="ms text-sec">check_circle</span>
+        <span class="font-bold text-os" style="font-size:16px;">Completed Sites</span>
+      </div>
+      <div id="settingsCompletedSiteList" class="space-y-2"></div>
+    </div>
+
     <!-- Stock master list -->
     <div>
       <div class="flex justify-between items-center mb-3">
@@ -407,6 +420,17 @@ details[open] .chevron{transform:rotate(180deg);}
   <label class="lbl">Description</label><input class="inp" id="fin-desc" placeholder="What is this for?"/>
   <label class="lbl">Amount (₹)</label><input class="inp" id="fin-amount" type="number" placeholder="0"/>
   <button class="btn-pri" onclick="submitFinance()">Add Entry</button>
+</div>
+</div>
+
+<!-- Rename Modal -->
+<div class="modal-bg" id="modalRename">
+<div class="modal">
+  <div class="flex justify-between items-center mb-4"><span class="font-bold text-lg text-os" id="renameTitle">Rename</span><button onclick="closeModal('modalRename')" class="ms text-osv">close</button></div>
+  <input type="hidden" id="rename-type"/>
+  <input type="hidden" id="rename-id"/>
+  <label class="lbl">New Name</label><input class="inp" id="rename-val" placeholder="Enter new name"/>
+  <button class="btn-pri" onclick="submitRename()">Save</button>
 </div>
 </div>
 
@@ -626,9 +650,10 @@ function renderSiteDetail() {
             <div class="card p-3"><div class="lbl mb-1">Balance</div><div class="mono font-bold ${balance>=0?'text-pri':'text-err'}">₹${fmtMoney(Math.abs(balance))}</div></div>
           </div>
           ${finForSite.slice(-5).map(f=>`
-            <div class="flex justify-between items-center py-2 border-b" style="border-color:rgba(255,255,255,.04);font-size:12px;">
-              <span class="text-osv">${f.description||'—'}</span>
+            <div class="flex items-center gap-2 py-2 border-b" style="border-color:rgba(255,255,255,.04);font-size:12px;">
+              <span class="text-osv flex-1">${f.description||'—'}</span>
               <span class="mono font-semibold ${f.type==='expense'?'text-err':'text-sec'}">${f.type==='expense'?'-':'+'} ₹${fmtMoney(Number(f.amount))}</span>
+              <button onclick="deleteFinanceEntry('${f.id}')" class="ms text-osv hover:text-err" style="font-size:16px;">delete</button>
             </div>`).join('')}
           <button onclick="openFinance('${site.id}')" class="w-full border border-dashed border-ov rounded-lg py-2 text-osv text-sm flex items-center justify-center gap-1 mt-3 hover:border-ter hover:text-ter transition-colors">
             <span class="ms" style="font-size:16px;">add</span>Add Entry
@@ -837,8 +862,9 @@ function renderProspects() {
         </div>
         ${v.visit_date?`<div class="flex items-center gap-1 text-pri mono text-xs mb-2"><span class="ms" style="font-size:13px;">calendar_today</span>${fmtDate(v.visit_date)}</div>`:''}
         ${v.notes?`<div class="text-sm text-osv border-l-2 pl-3" style="border-color:#3e4850;">${v.notes}</div>`:''}
-        <div class="flex gap-2 mt-3 flex-wrap">
+        <div class="flex gap-2 mt-3 flex-wrap items-center">
           ${['scheduled','visited','quoted','won','lost'].map(s=>`<button onclick="updateVisitStatus('${v.id}','${s}')" class="text-xs px-3 py-1 rounded-full border font-semibold transition-all ${v.status===s?'bg-pri text-on-pri border-pri':'border-ov text-osv hover:border-pri hover:text-pri'}">${s.charAt(0).toUpperCase()+s.slice(1)}</button>`).join('')}
+          <button onclick="deleteVisit('${v.id}')" class="ms text-osv hover:text-err ml-auto" style="font-size:20px;" title="Delete visit">delete</button>
         </div>
       </div>
     </div>`;
@@ -853,19 +879,31 @@ function renderSettingsEmployees() {
     <div class="card px-4 py-3 flex items-center gap-3">
       <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0" style="background:${empColors(i)}22;color:${empColors(i)};">${empInitial(e.name)}</div>
       <div class="flex-1"><div class="font-semibold text-os text-sm">${e.name}</div><div class="mono text-xs text-osv">${e.type}</div></div>
-      <button onclick="removeEmployee('${e.id}')" class="ms text-osv hover:text-err transition-colors" style="font-size:20px;">delete</button>
+      <button onclick="openRename('employee','${e.id}','${e.name.replace(/'/g,'\\'')}')" class="ms text-osv hover:text-pri transition-colors mr-1" style="font-size:20px;" title="Rename">edit</button>
+      <button onclick="removeEmployee('${e.id}')" class="ms text-osv hover:text-err transition-colors" style="font-size:20px;" title="Delete">delete</button>
     </div>`).join('');
 }
 
 function renderSettingsSites() {
   const el=document.getElementById('settingsSiteList');
+  const el2=document.getElementById('settingsCompletedSiteList');
   const nonFact=sites.filter(s=>s.type!=='factory');
-  if (!nonFact.length){el.innerHTML='<div class="text-osv text-sm">No sites yet.</div>';return;}
-  el.innerHTML=nonFact.map(s=>`
+  const active=nonFact.filter(s=>s.status!=='done');
+  const completed=nonFact.filter(s=>s.status==='done');
+  if (!active.length){el.innerHTML='<div class="text-osv text-sm">No active sites.</div>';}
+  else el.innerHTML=active.map(s=>`
     <div class="card px-4 py-3 flex items-center gap-3">
       <div class="w-3 h-3 rounded-full flex-shrink-0" style="background:${s.color||'#89ceff'};box-shadow:0 0 8px ${s.color||'#89ceff'};"></div>
       <div class="flex-1"><div class="font-semibold text-os text-sm">${s.name}</div><div class="mono text-xs text-osv">${s.status}${s.deadline?' · '+fmtDate(s.deadline):''}</div></div>
-      <button onclick="archiveSite('${s.id}')" class="ms text-osv hover:text-err transition-colors" style="font-size:20px;">archive</button>
+      <button onclick="openRename('site','${s.id}','${s.name.replace(/'/g,'\\'')}')" class="ms text-osv hover:text-pri transition-colors mr-1" style="font-size:20px;" title="Rename">edit</button>
+      <button onclick="archiveSite('${s.id}')" class="ms text-osv hover:text-err transition-colors" style="font-size:20px;" title="Mark Done">archive</button>
+    </div>`).join('');
+  if (!completed.length){el2.innerHTML='<div class="text-osv text-sm">No completed sites yet.</div>';}
+  else el2.innerHTML=completed.map(s=>`
+    <div class="card px-4 py-3 flex items-center gap-3 opacity-70">
+      <span class="ms text-sec" style="font-size:18px;">check_circle</span>
+      <div class="flex-1"><div class="font-semibold text-os text-sm line-through">${s.name}</div><div class="mono text-xs text-sec">completed</div></div>
+      <button onclick="restoreSite('${s.id}')" class="ms text-osv hover:text-pri transition-colors" style="font-size:20px;" title="Restore">restart_alt</button>
     </div>`).join('');
 }
 
@@ -1188,6 +1226,98 @@ async function executeAIAction({action,data}) {
       financeEntries.push(f); renderSiteDetail(); renderFactory();
     } catch(e){showToast('Finance entry failed','error');}
   }
+}
+
+
+// ── DELETE FUNCTIONS ──
+async function deleteItem(id) {
+  if (!confirm('Delete this item?')) return;
+  try {
+    await api('POST','items',{action:'delete',id});
+    items=items.filter(i=>i.id!==id);
+    renderSiteDetail(); renderFactory(); updateHUD();
+    showToast('Deleted','info');
+  } catch(e){showToast('Failed','error');}
+}
+
+async function deleteFinanceEntry(id) {
+  if (!confirm('Delete this entry?')) return;
+  try {
+    await api('POST','finance_entries',{action:'delete',id});
+    financeEntries=financeEntries.filter(f=>f.id!==id);
+    renderSiteDetail(); renderFactory();
+    showToast('Entry deleted','info');
+  } catch(e){showToast('Failed','error');}
+}
+
+async function deleteVisit(id) {
+  if (!confirm('Delete this visit?')) return;
+  try {
+    await api('POST','visits',{action:'delete',id});
+    visits=visits.filter(v=>v.id!==id);
+    renderProspects();
+    showToast('Visit deleted','info');
+  } catch(e){showToast('Failed','error');}
+}
+
+// ── RENAME FUNCTIONS ──
+function openRename(type, id, currentName) {
+  document.getElementById('rename-type').value=type;
+  document.getElementById('rename-id').value=id;
+  document.getElementById('rename-val').value=currentName;
+  document.getElementById('renameTitle').textContent=type==='site'?'Rename Site':'Rename Employee';
+  openModal('modalRename');
+}
+
+async function submitRename() {
+  const type=document.getElementById('rename-type').value;
+  const id=document.getElementById('rename-id').value;
+  const name=document.getElementById('rename-val').value.trim();
+  if (!name){showToast('Enter a name','error');return;}
+  try {
+    const table=type==='site'?'sites':'employees';
+    await api('POST',table,{action:'update',id,data:{name}});
+    if (type==='site'){const s=sites.find(x=>x.id===id);if(s)s.name=name;renderSiteChips();renderSiteDetail();renderSettingsSites();}
+    else {const e=employees.find(x=>x.id===id);if(e)e.name=name;renderSettingsEmployees();}
+    closeModal('modalRename');
+    showToast('Renamed ✓','success');
+  } catch(e){showToast('Failed: '+e.message,'error');}
+}
+
+async function restoreSite(id) {
+  try {
+    await api('POST','sites',{action:'update',id,data:{status:'active'}});
+    const s=sites.find(x=>x.id===id); if(s) s.status='active';
+    renderSiteChips(); renderSiteDetail(); renderSettingsSites(); updateHUD();
+    showToast('Site restored','success');
+  } catch(e){showToast('Failed','error');}
+}
+
+// ── SWIPE TO DELETE ──
+const _swipe={};
+function swipeStart(e,id){
+  _swipe[id]={x:e.touches[0].clientX,moved:false};
+}
+function swipeMove(e,id){
+  if(!_swipe[id])return;
+  const dx=e.touches[0].clientX-_swipe[id].x;
+  if(dx<-5){
+    _swipe[id].moved=true;
+    const el=document.getElementById('swf-'+id);
+    if(el){const t=Math.max(dx,-70);el.style.transform=`translateX(${t}px)`;el.style.transition='none';}
+    e.preventDefault();
+  }
+}
+function swipeEnd(e,id,deleteFn){
+  if(!_swipe[id])return;
+  const el=document.getElementById('swf-'+id);
+  if(el){
+    el.style.transition='transform .22s ease';
+    const dx=e.changedTouches[0].clientX-_swipe[id].x;
+    if(dx<-55){el.style.transform='translateX(-70px)';setTimeout(()=>deleteFn(),200);}
+    else{el.style.transform='translateX(0)';}
+  }
+  delete _swipe[id];
 }
 
 // ── TOAST ──
