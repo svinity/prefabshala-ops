@@ -274,7 +274,7 @@ details[open] .chevron{transform:rotate(180deg);}
         <span class="ms fill text-pri" style="font-size:32px;">architecture</span>
         <span class="font-bold text-os" style="font-size:20px;">Prefabshala</span>
       </div>
-      <div class="text-osv mono text-xs tracking-widest uppercase">Operations Suite v2.0</div>
+      <div class="text-osv mono text-xs tracking-widest uppercase">Operations Suite v3.0</div>
       <div class="text-osv text-xs mt-2 italic">Built for precision. Engineered for scale.</div>
     </div>
   </div>
@@ -438,6 +438,19 @@ details[open] .chevron{transform:rotate(180deg);}
 </div>
 </div>
 
+<!-- Edit Deadline -->
+<div class="modal-bg" id="modalEditDeadline">
+<div class="modal">
+  <div class="flex justify-between items-center mb-4"><span class="font-bold text-lg text-os">Edit Deadline</span><button onclick="closeModal('modalEditDeadline')" class="ms text-osv">close</button></div>
+  <input type="hidden" id="ed-site-id"/>
+  <label class="lbl">Completion Date</label><input class="inp" id="ed-date" type="date"/>
+  <div class="flex gap-2">
+    <button class="btn-pri flex-1" onclick="submitEditDeadline()">Save</button>
+    <button class="flex-1 py-3 rounded-xl border border-ov text-osv text-sm" onclick="submitEditDeadline(true)">Clear Date</button>
+  </div>
+</div>
+</div>
+
 <!-- Toast -->
 <div id="toast" class="toast"></div>
 
@@ -491,7 +504,7 @@ async function loadAll() {
     
     updateHUD();
     renderSiteChips();
-    if (sites.length>0){ activeSiteId=activeSiteId||sites.filter(s=>s.type!=='factory')[0]?.id; renderSiteDetail(); }
+    if (sites.length>0){ activeSiteId=activeSiteId||sites.find(s=>s.type!=='factory'&&s.status!=='done')?.id; renderSiteDetail(); }
     renderFactory();
     renderProspects();
     renderSettingsEmployees();
@@ -551,9 +564,9 @@ function showPage(name) {
 
 // ── SITE CHIPS ──
 function renderSiteChips() {
-  const nonFactory = sites.filter(s=>s.type!=='factory');
+  const activeSites = sites.filter(s=>s.type!=='factory'&&s.status!=='done');
   const c = document.getElementById('siteChips');
-  c.innerHTML = nonFactory.map(s=>`
+  c.innerHTML = activeSites.map(s=>`
     <button onclick="selectSite('${s.id}')" class="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold transition-all ${s.id===activeSiteId?'chip-active':'chip-inactive'}">
       <span class="w-2 h-2 rounded-full" style="background:${s.color||'#89ceff'}"></span>${s.name}
     </button>`).join('') +
@@ -592,7 +605,10 @@ function renderSiteDetail() {
             <div class="font-bold text-os mb-1" style="font-size:22px;">${site.name}</div>
             <div class="flex items-center gap-2 flex-wrap">
               <span class="status-badge" style="${statusCfg[site.status]||statusCfg.active}">${site.status.toUpperCase()}</span>
-              ${site.deadline?`<span class="mono text-xs text-osv flex items-center gap-1"><span class="ms" style="font-size:13px;">schedule</span>${fmtDate(site.deadline)} ${daysLeft!==null?`(${daysLeft}d left)`:''}</span>`:''}
+              <span class="mono text-xs text-osv flex items-center gap-1">
+                ${site.deadline?`<span class="ms" style="font-size:13px;">schedule</span>${fmtDate(site.deadline)} ${daysLeft!==null?'('+daysLeft+'d left)':''}`:``}
+                <button onclick="openEditDeadline('${site.id}','${site.deadline?(site.deadline.includes('T')?site.deadline.split('T')[0]:site.deadline):''}')" class="ms hover:text-pri transition-colors" style="font-size:14px;" title="${site.deadline?'Edit deadline':'Set deadline'}">${site.deadline?'edit':'add_circle'}</button>
+              </span>
             </div>
           </div>
           <!-- Progress ring -->
@@ -1162,11 +1178,33 @@ async function toggleItem(id, currentStatus) {
   } catch(e){showToast('Failed','error');}
 }
 
+function openEditDeadline(siteId, currentDate) {
+  document.getElementById('ed-site-id').value=siteId;
+  document.getElementById('ed-date').value=currentDate||'';
+  openModal('modalEditDeadline');
+}
+
+async function submitEditDeadline(clear=false) {
+  const id=document.getElementById('ed-site-id').value;
+  const deadline=clear?null:(document.getElementById('ed-date').value||null);
+  try {
+    await api('POST','sites',{action:'update',id,data:{deadline}});
+    const s=sites.find(s=>s.id===id);
+    if(s) s.deadline=deadline;
+    closeModal('modalEditDeadline');
+    renderSiteDetail(); renderSiteChips(); renderSettingsSites(); updateHUD();
+    showToast(clear?'Deadline cleared':'Deadline updated ✓','success');
+  } catch(e){showToast('Failed: '+e.message,'error');}
+}
+
 async function archiveSite(id) {
   try {
     await api('POST','sites',{action:'update',id,data:{status:'done'}});
     const s=sites.find(x=>x.id===id); if(s) s.status='done';
-    renderSiteChips(); renderSiteDetail(); renderSettingsSites(); updateHUD(); showToast('Archived','info');
+    // Auto-select next active site
+    const nextActive=sites.find(x=>x.type!=='factory'&&x.status!=='done'&&x.id!==id);
+    activeSiteId=nextActive?nextActive.id:null;
+    renderSiteChips(); renderSiteDetail(); renderSettingsSites(); updateHUD(); showToast('Site marked as done ✓','success');
   } catch(e){showToast('Failed','error');}
 }
 
