@@ -346,6 +346,7 @@ details[open] .chevron{transform:rotate(180deg);}
 <div class="modal">
   <div class="flex justify-between items-center mb-4"><span id="addItemTitle" class="font-bold text-lg text-os">Add Item</span><button onclick="closeModal('modalAddItem')" class="ms text-osv">close</button></div>
   <input type="hidden" id="ai-site-id"/>
+  <input type="hidden" id="ai-item-id"/>
   <input type="hidden" id="ai-item-type"/>
   <label class="lbl">Description</label><input class="inp" id="ai-title" placeholder="What needs to be done?"/>
   <label class="lbl">Due Date</label><input class="inp" id="ai-date" type="date"/>
@@ -356,7 +357,7 @@ details[open] .chevron{transform:rotate(180deg);}
     <label class="lbl">Vendor</label><input class="inp" id="ai-vendor" placeholder="Vendor name"/>
     <label class="lbl">Amount (₹)</label><input class="inp" id="ai-amount" type="number" placeholder="0"/>
   </div>
-  <button class="btn-pri" onclick="submitAddItem()">Add</button>
+  <button class="btn-pri" id="ai-submit-btn" onclick="submitAddItem()">Add</button>
 </div>
 </div>
 
@@ -415,11 +416,12 @@ details[open] .chevron{transform:rotate(180deg);}
 <div class="modal">
   <div class="flex justify-between items-center mb-4"><span class="font-bold text-lg text-os">Add Finance Entry</span><button onclick="closeModal('modalFinance')" class="ms text-osv">close</button></div>
   <input type="hidden" id="fin-site-id"/>
+  <input type="hidden" id="fin-entry-id"/>
   <label class="lbl">Type</label>
   <select class="sel" id="fin-type"><option value="expense">Expense</option><option value="received">Received / Sale</option></select>
   <label class="lbl">Description</label><input class="inp" id="fin-desc" placeholder="What is this for?"/>
   <label class="lbl">Amount (₹)</label><input class="inp" id="fin-amount" type="number" placeholder="0"/>
-  <button class="btn-pri" onclick="submitFinance()">Add Entry</button>
+  <button class="btn-pri" id="fin-submit-btn" onclick="submitFinance()">Add Entry</button>
 </div>
 </div>
 
@@ -708,6 +710,8 @@ function renderItemList(list, type) {
           ${item.amount?`<span class="mono text-xs" style="color:#ffb86e;">₹${fmtMoney(item.amount)}</span>`:''}
         </div>
       </div>
+      <button onclick="openEditItem(${JSON.stringify(item).replace(/"/g,'&quot;')})" class="ms text-osv hover:text-pri flex-shrink-0" style="font-size:18px;" title="Edit">edit</button>
+      <button onclick="deleteItem('${item.id}')" class="ms text-osv hover:text-err flex-shrink-0" style="font-size:18px;" title="Delete">delete</button>
     </div>`).join('');
 }
 
@@ -932,8 +936,10 @@ function selectColor(el, color) {
 
 function openAddItemFor(siteId, type) {
   document.getElementById('ai-site-id').value=siteId;
+  document.getElementById('ai-item-id').value='';
   document.getElementById('ai-item-type').value=type;
   document.getElementById('addItemTitle').textContent=type==='purchase'?'Add Purchase':'Add Task';
+  document.getElementById('ai-submit-btn').textContent='Add';
   document.getElementById('ai-date').value=todayStr();
   document.getElementById('ai-purchase-fields').style.display=type==='purchase'?'block':'none';
   // Emp grid
@@ -964,7 +970,16 @@ function toggleCalEmp(id,el) {
   else{selectedCalEmps.push(id);el.classList.add('sel');}
 }
 
-function openFinance(siteId){document.getElementById('fin-site-id').value=siteId;openModal('modalFinance');}
+function openFinance(siteId){
+  document.getElementById('fin-site-id').value=siteId;
+  document.getElementById('fin-entry-id').value='';
+  document.getElementById('fin-desc').value='';
+  document.getElementById('fin-amount').value='';
+  document.getElementById('fin-type').value='expense';
+  document.querySelector('#modalFinance .font-bold').textContent='Add Finance Entry';
+  document.getElementById('fin-submit-btn').textContent='Add Entry';
+  openModal('modalFinance');
+}
 
 // ── SUBMIT ACTIONS ──
 async function submitAddSite() {
@@ -983,12 +998,23 @@ async function submitAddItem() {
   if (!title){showToast('Enter a description','error');return;}
   const siteId=document.getElementById('ai-site-id').value;
   const type=document.getElementById('ai-item-type').value;
-  const body={site_id:siteId,type,title,due_date:document.getElementById('ai-date').value||null,status:'pending',vendor:document.getElementById('ai-vendor').value||null,amount:document.getElementById('ai-amount').value||null};
+  const editId=document.getElementById('ai-item-id').value;
+  const body={site_id:siteId,type,title,due_date:document.getElementById('ai-date').value||null,vendor:document.getElementById('ai-vendor').value||null,amount:document.getElementById('ai-amount').value||null};
   try {
-    const [item]=await api('POST','items',{action:'insert',data:body});
-    items.push(item); closeModal('modalAddItem'); document.getElementById('ai-title').value='';
-    renderSiteDetail(); renderFactory(); updateHUD();
-    showToast('Added ✓','success');
+    if (editId) {
+      await api('POST','items',{action:'update',id:editId,data:body});
+      const idx=items.findIndex(i=>i.id===editId);
+      if (idx>-1) items[idx]={...items[idx],...body};
+      closeModal('modalAddItem'); document.getElementById('ai-title').value='';
+      renderSiteDetail(); renderFactory(); updateHUD();
+      showToast('Updated ✓','success');
+    } else {
+      body.status='pending';
+      const [item]=await api('POST','items',{action:'insert',data:body});
+      items.push(item); closeModal('modalAddItem'); document.getElementById('ai-title').value='';
+      renderSiteDetail(); renderFactory(); updateHUD();
+      showToast('Added ✓','success');
+    }
   } catch(e){showToast('Failed: '+e.message,'error');}
 }
 
@@ -1062,10 +1088,20 @@ async function submitFinance() {
   const amount=document.getElementById('fin-amount').value;
   if (!amount){showToast('Enter amount','error');return;}
   const siteId=document.getElementById('fin-site-id').value;
+  const editId=document.getElementById('fin-entry-id').value;
+  const data={site_id:siteId,type:document.getElementById('fin-type').value,description:document.getElementById('fin-desc').value||'',amount:Number(amount)};
   try {
-    const [f]=await api('POST','finance_entries',{action:'insert',data:{site_id:siteId,type:document.getElementById('fin-type').value,description:document.getElementById('fin-desc').value||'',amount:Number(amount)}});
-    financeEntries.push(f); closeModal('modalFinance'); document.getElementById('fin-amount').value=''; document.getElementById('fin-desc').value='';
-    renderSiteDetail(); renderFactory(); showToast('Entry added ✓','success');
+    if (editId) {
+      await api('POST','finance_entries',{action:'update',id:editId,data});
+      const idx=financeEntries.findIndex(f=>f.id===editId);
+      if (idx>-1) financeEntries[idx]={...financeEntries[idx],...data};
+      closeModal('modalFinance'); document.getElementById('fin-amount').value=''; document.getElementById('fin-desc').value='';
+      renderSiteDetail(); renderFactory(); showToast('Entry updated ✓','success');
+    } else {
+      const [f]=await api('POST','finance_entries',{action:'insert',data});
+      financeEntries.push(f); closeModal('modalFinance'); document.getElementById('fin-amount').value=''; document.getElementById('fin-desc').value='';
+      renderSiteDetail(); renderFactory(); showToast('Entry added ✓','success');
+    }
   } catch(e){showToast('Failed: '+e.message,'error');}
 }
 
@@ -1230,6 +1266,35 @@ async function executeAIAction({action,data}) {
 
 
 // ── DELETE FUNCTIONS ──
+function openEditItem(item) {
+  document.getElementById('ai-site-id').value=item.site_id;
+  document.getElementById('ai-item-id').value=item.id;
+  document.getElementById('ai-item-type').value=item.type;
+  document.getElementById('addItemTitle').textContent=item.type==='purchase'?'Edit Purchase':'Edit Task';
+  document.getElementById('ai-submit-btn').textContent='Save';
+  document.getElementById('ai-title').value=item.title||'';
+  document.getElementById('ai-date').value=item.due_date?(item.due_date.includes('T')?item.due_date.split('T')[0]:item.due_date):'';
+  document.getElementById('ai-vendor').value=item.vendor||'';
+  document.getElementById('ai-amount').value=item.amount||'';
+  document.getElementById('ai-purchase-fields').style.display=item.type==='purchase'?'block':'none';
+  const g=document.getElementById('ai-emp-grid');
+  const assigned=(item.assigned_to||'').split(',').filter(Boolean);
+  selectedItemEmps=[...assigned];
+  g.innerHTML=employees.map((e,i)=>`<div class="emp-chip ${assigned.includes(e.id)?'sel':''}" style="color:${empColors(i)};border-color:${empColors(i)}44;" onclick="toggleItemEmp('${e.id}',this)">${e.name}</div>`).join('');
+  openModal('modalAddItem');
+}
+
+function openEditFinance(entry) {
+  document.getElementById('fin-site-id').value=entry.site_id;
+  document.getElementById('fin-entry-id').value=entry.id;
+  document.getElementById('fin-type').value=entry.type;
+  document.getElementById('fin-desc').value=entry.description||'';
+  document.getElementById('fin-amount').value=entry.amount||'';
+  document.querySelector('#modalFinance .font-bold').textContent='Edit Finance Entry';
+  document.getElementById('fin-submit-btn').textContent='Save';
+  openModal('modalFinance');
+}
+
 async function deleteItem(id) {
   if (!confirm('Delete this item?')) return;
   try {
