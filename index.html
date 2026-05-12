@@ -191,6 +191,8 @@ details[open] .chevron{transform:rotate(180deg);}
     <div class="overflow-x-auto -mx-4">
       <div id="calGrid" style="min-width:600px;padding:0 16px;"></div>
     </div>
+    <!-- Unassigned employees section (site view only) -->
+    <div id="calUnassigned"></div>
   </div>
 </div>
 
@@ -816,11 +818,25 @@ function renderCalendar() {
           pills=emps.map((e,i)=>`<div class="cal-pill" style="background:${empColors(i)}22;color:${empColors(i)};border:1px solid ${empColors(i)}44;">
             <span style="width:5px;height:5px;border-radius:50%;background:${empColors(i)};flex-shrink:0;display:inline-block;"></span>${e.name}
           </div>`).join('');
+          // Add task & purchase due dates
+          const dayItems=items.filter(i=>i.site_id===row.id&&i.status!=='done'&&i.due_date&&(i.due_date.includes('T')?i.due_date.split('T')[0]:i.due_date)===iso);
+          const taskPills=dayItems.filter(i=>i.type==='work').map(i=>`<div class="cal-pill" style="background:rgba(137,206,255,.12);color:#89ceff;border:1px solid rgba(137,206,255,.3);">
+            <span class="ms" style="font-size:8px;flex-shrink:0;">task_alt</span>${i.title}
+          </div>`).join('');
+          const purchPills=dayItems.filter(i=>i.type==='purchase').map(i=>`<div class="cal-pill" style="background:rgba(255,184,110,.12);color:#ffb86e;border:1px solid rgba(255,184,110,.3);">
+            <span class="ms" style="font-size:8px;flex-shrink:0;">shopping_cart</span>${i.title}
+          </div>`).join('');
+          pills+=taskPills+purchPills;
         } else {
           const dayAssignments=assignments.filter(a=>a.employee_id===row.id&&a.work_date===iso);
           const sitesForDay=dayAssignments.map(a=>sites.find(s=>s.id===a.site_id)).filter(Boolean);
           pills=sitesForDay.map(s=>`<div class="cal-pill" style="background:${s.color||'#89ceff'}22;color:${s.color||'#89ceff'};border:1px solid ${(s.color||'#89ceff')}44;">
             <span style="width:5px;height:5px;border-radius:50%;background:${s.color||'#89ceff'};flex-shrink:0;display:inline-block;"></span>${s.name}
+          </div>`).join('');
+          // Tasks due today assigned to this employee
+          const empTasks=items.filter(i=>i.status!=='done'&&i.due_date&&(i.due_date.includes('T')?i.due_date.split('T')[0]:i.due_date)===iso&&(i.assigned_to||'').split(',').includes(row.id));
+          pills+=empTasks.map(i=>`<div class="cal-pill" style="background:rgba(137,206,255,.12);color:#89ceff;border:1px solid rgba(137,206,255,.3);">
+            <span class="ms" style="font-size:8px;flex-shrink:0;">task_alt</span>${i.title}
           </div>`).join('');
         }
         const siteIdForAssign = _calView==='site' ? row.id : null;
@@ -833,6 +849,37 @@ function renderCalendar() {
   });
 
   document.getElementById('calGrid').innerHTML=html;
+
+  // ── Unassigned employees section (site view only) ──
+  const unassignedEl=document.getElementById('calUnassigned');
+  if (_calView!=='site' || !employees.length) { unassignedEl.innerHTML=''; return; }
+
+  const dayNames2=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const months2=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let uHtml=`<div class="mt-4 px-4">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="ms text-osv" style="font-size:16px;">person_off</span>
+      <span class="font-semibold text-os" style="font-size:13px;">Unassigned</span>
+      <span class="text-osv mono" style="font-size:10px;">employees not assigned today or this week</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;">`;
+
+  days.forEach((d,di)=>{
+    const iso=d.toISOString().split('T')[0];
+    const isToday=iso===todayISO;
+    const assignedIds=new Set(assignments.filter(a=>a.work_date===iso).map(a=>a.employee_id));
+    const unassigned=employees.filter(e=>!assignedIds.has(e.id));
+    uHtml+=`<div style="background:#171c20;border-radius:8px;padding:8px;border:1px solid ${isToday?'rgba(137,206,255,.25)':'rgba(255,255,255,.04)'};">
+      <div class="mono mb-2" style="font-size:9px;letter-spacing:.06em;color:${isToday?'#89ceff':'#3e4850'};">${dayNames2[di]} ${d.getDate()} ${months2[d.getMonth()]}</div>
+      ${unassigned.length===0
+        ? `<div style="font-size:10px;color:#3e4850;">All assigned</div>`
+        : unassigned.map((e,i)=>`<div style="font-size:11px;padding:3px 6px;margin-bottom:3px;border-radius:4px;background:${empColors(i)}11;color:${empColors(i)};border:1px solid ${empColors(i)}22;">${e.name}</div>`).join('')
+      }
+    </div>`;
+  });
+
+  uHtml+=`</div></div>`;
+  unassignedEl.innerHTML=uHtml;
 }
 
 function getWeekNum(d) {
@@ -1006,13 +1053,13 @@ async function submitAddItem() {
       const idx=items.findIndex(i=>i.id===editId);
       if (idx>-1) items[idx]={...items[idx],...body};
       closeModal('modalAddItem'); document.getElementById('ai-title').value='';
-      renderSiteDetail(); renderFactory(); updateHUD();
+      renderSiteDetail(); renderFactory(); updateHUD(); renderCalendar();
       showToast('Updated ✓','success');
     } else {
       body.status='pending';
       const [item]=await api('POST','items',{action:'insert',data:body});
       items.push(item); closeModal('modalAddItem'); document.getElementById('ai-title').value='';
-      renderSiteDetail(); renderFactory(); updateHUD();
+      renderSiteDetail(); renderFactory(); updateHUD(); renderCalendar();
       showToast('Added ✓','success');
     }
   } catch(e){showToast('Failed: '+e.message,'error');}
@@ -1300,7 +1347,7 @@ async function deleteItem(id) {
   try {
     await api('POST','items',{action:'delete',id});
     items=items.filter(i=>i.id!==id);
-    renderSiteDetail(); renderFactory(); updateHUD();
+    renderSiteDetail(); renderFactory(); updateHUD(); renderCalendar();
     showToast('Deleted','info');
   } catch(e){showToast('Failed','error');}
 }
