@@ -274,7 +274,7 @@ details[open] .chevron{transform:rotate(180deg);}
         <span class="ms fill text-pri" style="font-size:32px;">architecture</span>
         <span class="font-bold text-os" style="font-size:20px;">Prefabshala</span>
       </div>
-      <div class="text-osv mono text-xs tracking-widest uppercase">Operations Suite v3.0</div>
+      <div class="text-osv mono text-xs tracking-widest uppercase">Operations Suite v6.0</div>
       <div class="text-osv text-xs mt-2 italic">Built for precision. Engineered for scale.</div>
     </div>
   </div>
@@ -1009,6 +1009,7 @@ function openAddItemFor(siteId, type) {
   const g=document.getElementById('ai-emp-grid');
   g.innerHTML=employees.map((e,i)=>`<div class="emp-chip" style="color:${empColors(i)};border-color:${empColors(i)}44;" onclick="toggleItemEmp('${e.id}',this)">${e.name}</div>`).join('');
   document.getElementById('ai-assigned').value='';
+  selectedItemEmps=[];
   openModal('modalAddItem');
 }
 
@@ -1062,7 +1063,7 @@ async function submitAddItem() {
   const siteId=document.getElementById('ai-site-id').value;
   const type=document.getElementById('ai-item-type').value;
   const editId=document.getElementById('ai-item-id').value;
-  const body={site_id:siteId,type,title,due_date:document.getElementById('ai-date').value||null,vendor:document.getElementById('ai-vendor').value||null,amount:document.getElementById('ai-amount').value||null};
+  const body={site_id:siteId,type,title,due_date:document.getElementById('ai-date').value||null,vendor:document.getElementById('ai-vendor').value||null,amount:document.getElementById('ai-amount').value||null,assigned_to:selectedItemEmps.join(',')||null};
   try {
     if (editId) {
       await api('POST','items',{action:'update',id:editId,data:body});
