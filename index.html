@@ -526,28 +526,52 @@ async function api(method, table, opts={}) {
   }
 }
 
+// ── CACHE (5-min TTL for instant loads) ──
+const CACHE_KEY='pf_cache_v8', CACHE_TTL=5*60*1000;
+function saveCache(){try{localStorage.setItem(CACHE_KEY,JSON.stringify({ts:Date.now(),sites,employees,items,visits,assignments,stockItems,financeEntries}));}catch(e){}}
+function loadCache(){try{const c=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');if(c&&Date.now()-c.ts<CACHE_TTL){sites=c.sites||[];employees=c.employees||[];items=c.items||[];visits=c.visits||[];assignments=c.assignments||[];stockItems=c.stockItems||[];financeEntries=c.financeEntries||[];return true;}}catch(e){}return false;}
+
+function renderAll(){
+  updateHUD(); renderSiteChips();
+  if(sites.length>0){activeSiteId=activeSiteId||sites.find(s=>s.type!=='factory'&&s.status!=='done')?.id;}
+  renderSiteDetail(); renderFactory(); renderProspects();
+  renderSettingsEmployees(); renderSettingsSites(); renderSettingsStock();
+  renderCalendar();
+}
+
+// ── SMART RENDER — only re-render visible page ──
+function smartRender(){
+  updateHUD();
+  const active=document.querySelector('.page.active')?.id;
+  if(active==='page-sites'){renderSiteChips();renderSiteDetail();}
+  else if(active==='page-factory'){renderFactory();}
+  else if(active==='page-calendar'){renderCalendar();}
+  else if(active==='page-settings'){renderSettingsEmployees();renderSettingsSites();renderSettingsStock();}
+  else if(active==='page-prospects'){renderProspects();}
+}
+
 // ── LOAD ──
 async function loadAll() {
+  // 1. Render from cache immediately (feels instant)
+  if(loadCache()){
+    renderAll();
+    showToast('Loading fresh data…','info');
+  }
+  // 2. Fetch all 7 tables in parallel
   try {
-    [sites, employees, items, visits, assignments] = await Promise.all([
+    const results = await Promise.all([
       api('GET','sites'),
       api('GET','employees'),
       api('GET','items'),
       api('GET','visits'),
-      api('GET','assignments')
+      api('GET','assignments'),
+      api('GET','stock_items').catch(()=>[]),
+      api('GET','finance_entries').catch(()=>[]),
     ]);
-    try { stockItems = await api('GET','stock_items'); } catch(e){ stockItems=[]; }
-    try { financeEntries = await api('GET','finance_entries'); } catch(e){ financeEntries=[]; }
-    
-    updateHUD();
-    renderSiteChips();
-    if (sites.length>0){ activeSiteId=activeSiteId||sites.find(s=>s.type!=='factory'&&s.status!=='done')?.id; renderSiteDetail(); }
-    renderFactory();
-    renderProspects();
-    renderSettingsEmployees();
-    renderSettingsSites();
-    renderSettingsStock();
-    renderCalendar();
+    [sites,employees,items,visits,assignments,stockItems,financeEntries]=results;
+    saveCache();
+    renderAll();
+    showToast('',''); // clear toast
   } catch(e) { showToast('Failed to load data','error'); console.error(e); }
 }
 
