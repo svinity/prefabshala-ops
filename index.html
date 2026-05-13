@@ -63,11 +63,13 @@ details[open] .chevron{transform:rotate(180deg);}
 .toggle-track.on{background:#4edea3;}
 .toggle-thumb{width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3);}
 .toggle-track.on .toggle-thumb{transform:translateX(20px);}
-.cal-cell{min-height:80px;padding:4px;border-right:1px solid rgba(255,255,255,.04);cursor:pointer;width:86px;overflow:hidden;box-sizing:border-box;}
+.cal-cell{min-height:80px;padding:4px;border-right:1px solid rgba(255,255,255,.04);cursor:pointer;overflow:hidden;box-sizing:border-box;}
 .cal-cell:hover{background:rgba(137,206,255,.04);}
 .cal-cell.today-col{background:rgba(137,206,255,.05);}
 .cal-cell.drag-over{background:rgba(137,206,255,.15);outline:2px dashed rgba(137,206,255,.5);outline-offset:-2px;}
 .cal-pill{font-size:9px;padding:2px 5px;border-radius:4px;margin-bottom:2px;display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;cursor:default;}
+.dragging .cal-pill{pointer-events:none !important;}
+.dragging .cal-cell{cursor:copy;}
 .emp-chip{font-size:11px;padding:4px 10px;border-radius:7px;border:1px solid;cursor:pointer;transition:all .15s;}
 .emp-chip.sel{border-color:#89ceff;background:rgba(137,206,255,.12);color:#89ceff;}
 .status-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;letter-spacing:.06em;text-transform:uppercase;}
@@ -190,7 +192,9 @@ details[open] .chevron{transform:rotate(180deg);}
     </div>
     <!-- Calendar grid container -->
     <div class="overflow-x-auto -mx-4">
-      <div id="calGrid" style="min-width:682px;padding:0 16px;"></div>
+      <div id="calGrid" style="min-width:682px;padding:0 16px;width:100%;"></div>
+    <!-- Remove / unassign drop zone -->
+    <div id="calRemoveZone" ondragover="event.preventDefault();this.style.background='rgba(255,99,99,.18)';this.style.borderColor='#ff6363';" ondragleave="this.style.background='';this.style.borderColor='';" ondrop="event.preventDefault();this.style.background='';this.style.borderColor='';handleRemoveDrop(event);" style="display:none;margin:12px 16px 0;padding:10px 16px;border:2px dashed rgba(255,99,99,.4);border-radius:10px;text-align:center;font-size:11px;color:rgba(255,99,99,.7);cursor:pointer;transition:all .2s;"><span style="font-size:14px;vertical-align:middle;margin-right:6px;">&#128465;</span>Drop employee here to unassign from this day</div>
     </div>
     <!-- Unassigned employees section (site view only) -->
     <div id="calUnassigned"></div>
@@ -275,7 +279,7 @@ details[open] .chevron{transform:rotate(180deg);}
         <span class="ms fill text-pri" style="font-size:32px;">architecture</span>
         <span class="font-bold text-os" style="font-size:20px;">Prefabshala</span>
       </div>
-      <div class="text-osv mono text-xs tracking-widest uppercase">Operations Suite v9.0</div>
+      <div class="text-osv mono text-xs tracking-widest uppercase">Operations Suite v10.0</div>
       <div class="text-osv text-xs mt-2 italic">Built for precision. Engineered for scale.</div>
     </div>
   </div>
@@ -527,7 +531,9 @@ async function api(method, table, opts={}) {
 }
 
 // ── CACHE (5-min TTL for instant loads) ──
-const CACHE_KEY='pf_cache_v9', CACHE_TTL=5*60*1000;
+const CACHE_KEY='pf_cache_v10', CACHE_TTL=5*60*1000;
+function localDate(s){if(!s)return '';if(!s.includes('T'))return s;return new Date(s).toLocaleDateString('en-CA');}
+
 function saveCache(){try{localStorage.setItem(CACHE_KEY,JSON.stringify({ts:Date.now(),sites,employees,items,visits,assignments,stockItems,financeEntries}));}catch(e){}}
 function loadCache(){try{const c=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');if(c&&Date.now()-c.ts<CACHE_TTL){sites=c.sites||[];employees=c.employees||[];items=c.items||[];visits=c.visits||[];assignments=c.assignments||[];stockItems=c.stockItems||[];financeEntries=c.financeEntries||[];return true;}}catch(e){}return false;}
 
@@ -644,7 +650,7 @@ function renderSiteDetail() {
   const done = siteItems.filter(i=>i.status==='done').length;
   const pct = siteItems.length ? Math.round(done/siteItems.length*100) : 0;
   const daysLeft = site.deadline ? Math.ceil((new Date(site.deadline)-today)/86400000) : null;
-  const todayAssigned = assignments.filter(a=>a.site_id===activeSiteId&&a.work_date===todayStr()).map(a=>employees.find(e=>e.id===a.employee_id)).filter(Boolean);
+  const todayAssigned = assignments.filter(a=>a.site_id===activeSiteId&&localDate(a.work_date)===todayStr()).map(a=>employees.find(e=>e.id===a.employee_id)).filter(Boolean);
   const finForSite = financeEntries.filter(f=>f.site_id===activeSiteId);
   const expense = finForSite.filter(f=>f.type==='expense').reduce((s,f)=>s+Number(f.amount),0);
   const received = finForSite.filter(f=>f.type==='received').reduce((s,f)=>s+Number(f.amount),0);
@@ -684,11 +690,35 @@ function renderSiteDetail() {
         </div>
         <!-- Today's team -->
         <div class="flex items-center gap-2 mt-3 flex-wrap">
-          <span class="mono text-osv" style="font-size:9px;letter-spacing:.1em;">TODAY:</span>
-          ${todayAssigned.map((e,i)=>`<span class="text-xs px-2 py-1 rounded-full font-semibold" style="background:${empColors(i)}22;color:${empColors(i)};border:1px solid ${empColors(i)}44;">${e.name}</span>`).join('')}
-          <button onclick="openAssign('${site.id}','${todayStr()}')" class="text-xs text-pri border border-dashed border-pri/40 px-2 py-1 rounded-full">+ Assign</button>
+          <span class="ms text-osv" style="font-size:14px;">group</span>
+          <span class="mono text-osv" style="font-size:9px;letter-spacing:.1em;">TODAY ON SITE:</span>
+          ${todayAssigned.length===0
+            ? `<span class="text-xs text-osv italic">Nobody assigned</span>`
+            : todayAssigned.map((e,i)=>`<span class="text-xs px-2 py-1 rounded-full font-semibold" style="background:rgba(137,206,255,.12);color:#89ceff;border:1px solid rgba(137,206,255,.3);">${e.name}</span>`).join('')}
+          <button onclick="openAssign('${site.id}','${todayStr()}')" class="text-xs text-pri border border-dashed border-pri/40 px-2 py-1 rounded-full flex items-center gap-1"><span class="ms" style="font-size:12px;">person_add</span>Assign</button>
         </div>
       </div>
+
+      <!-- This week schedule strip -->
+      ${(()=>{
+        const days7=[0,1,2,3,4,5,6].map(n=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1+n);return d;});
+        const dn=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+        return `<div class="px-4 pb-3 overflow-x-auto"><div style="display:flex;gap:6px;min-width:420px;">
+          ${days7.map((d,i)=>{
+            const iso=d.toISOString().split('T')[0];
+            const isToday=iso===todayStr();
+            const emps=assignments.filter(a=>a.site_id===site.id&&localDate(a.work_date)===iso).map(a=>employees.find(e=>e.id===a.employee_id)).filter(Boolean);
+            return `<div onclick="openAssign('${site.id}','${iso}')" style="flex:1;min-width:52px;background:${isToday?'rgba(137,206,255,.08)':'#171c20'};border:1px solid ${isToday?'rgba(137,206,255,.3)':'rgba(255,255,255,.06)'};border-radius:8px;padding:6px 4px;cursor:pointer;text-align:center;">
+              <div class="mono" style="font-size:8px;color:${isToday?'#89ceff':'#88929b'};">${dn[i]}</div>
+              <div style="font-size:10px;font-weight:700;color:${isToday?'#89ceff':'#dee3e9'};">${d.getDate()}</div>
+              <div style="margin-top:3px;">${emps.length===0
+                ? `<div style="font-size:8px;color:#3e4850;">—</div>`
+                : emps.map(e=>`<div style="font-size:8px;background:rgba(137,206,255,.1);color:#89ceff;border-radius:3px;padding:1px 3px;margin:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.name.split(' ')[0]}</div>`).join('')}
+              </div>
+            </div>`;
+          }).join('')}
+        </div></div>`;
+      })()}
 
       <!-- Tasks -->
       <details open>
@@ -904,7 +934,7 @@ function renderCalendar() {
 
   const todayISO = todayStr();
   
-  let html = `<div style="display:grid;grid-template-columns:80px repeat(7,86px);border-bottom:1px solid rgba(255,255,255,.06);">
+  let html = `<div style="display:grid;grid-template-columns:80px repeat(7,minmax(86px,1fr));border-bottom:1px solid rgba(255,255,255,.06);">
     <div class="p-2"></div>
     ${days.map((d,i)=>{
       const iso=d.toISOString().split('T')[0];
@@ -917,7 +947,7 @@ function renderCalendar() {
   </div>`;
 
   rows.forEach((row,ri)=>{
-    html+=`<div style="display:grid;grid-template-columns:80px repeat(7,86px);border-bottom:1px solid rgba(255,255,255,.04);">
+    html+=`<div style="display:grid;grid-template-columns:80px repeat(7,minmax(86px,1fr));border-bottom:1px solid rgba(255,255,255,.04);">
       <div class="p-2 flex flex-col justify-center" style="background:#171c20;border-right:1px solid rgba(255,255,255,.06);width:80px;overflow:hidden;">
         <div class="mono" style="font-size:8px;letter-spacing:.08em;color:#89ceff;">${_calView==='site'?'SITE':'PERSON'}</div>
         <div class="font-bold text-os" style="font-size:11px;">${row.name}</div>
@@ -927,21 +957,27 @@ function renderCalendar() {
         const isToday=iso===todayISO;
         let pills='';
         if (_calView==='site') {
-          const dayAssignments=assignments.filter(a=>a.site_id===row.id&&a.work_date===iso);
+          const dayAssignments=assignments.filter(a=>a.site_id===row.id&&localDate(a.work_date)===iso);
           // ORDER: Tasks (red, top) → Purchases (orange) → Employees (blue, bottom)
           const dayItems=items.filter(i=>i.site_id===row.id&&i.status!=='done'&&i.due_date&&(i.due_date.includes('T')?i.due_date.split('T')[0]:i.due_date)===iso);
-          const taskPills=dayItems.filter(i=>i.type==='work').map(i=>`<div class="cal-pill" draggable="true" ondragstart="event.dataTransfer.setData('itemId','${i.id}');event.dataTransfer.effectAllowed='move';event.stopPropagation();" style="background:rgba(255,80,80,.15);color:#ff6b6b;border:1px solid rgba(255,80,80,.35);cursor:grab;">
+          const taskPills=dayItems.filter(i=>i.type==='work').map(i=>`<div class="cal-pill" draggable="true" ondragstart="event.dataTransfer.setData('itemId','${i.id}');event.dataTransfer.effectAllowed='move';event.stopPropagation();" ondragover="event.preventDefault();event.stopPropagation();const cc=this.closest('.cal-cell');if(cc)cc.classList.add('drag-over');" ondrop="event.preventDefault();event.stopPropagation();const cc=this.closest('.cal-cell');if(cc)handleCellDrop(cc.dataset.site,cc.dataset.date,event);" style="background:rgba(78,222,163,.15);color:#4edea3;border:1px solid rgba(78,222,163,.35);cursor:grab;">
             <span class="ms" style="font-size:8px;flex-shrink:0;">task_alt</span>${i.title}
           </div>`).join('');
-          const purchPills=dayItems.filter(i=>i.type==='purchase').map(i=>`<div class="cal-pill" draggable="true" ondragstart="event.dataTransfer.setData('itemId','${i.id}');event.dataTransfer.effectAllowed='move';event.stopPropagation();" style="background:rgba(255,184,110,.15);color:#ffb86e;border:1px solid rgba(255,184,110,.35);cursor:grab;">
+          const purchPills=dayItems.filter(i=>i.type==='purchase').map(i=>`<div class="cal-pill" draggable="true" ondragstart="event.dataTransfer.setData('itemId','${i.id}');event.dataTransfer.effectAllowed='move';event.stopPropagation();" ondragover="event.preventDefault();event.stopPropagation();const cc=this.closest('.cal-cell');if(cc)cc.classList.add('drag-over');" ondrop="event.preventDefault();event.stopPropagation();const cc=this.closest('.cal-cell');if(cc)handleCellDrop(cc.dataset.site,cc.dataset.date,event);" style="background:rgba(255,184,110,.15);color:#ffb86e;border:1px solid rgba(255,184,110,.35);cursor:grab;">
             <span class="ms" style="font-size:8px;flex-shrink:0;">shopping_cart</span>${i.title}
           </div>`).join('');
-          const empPills=dayAssignments.map(a=>{const e=employees.find(x=>x.id===a.employee_id);if(!e)return '';return `<div class="cal-pill" draggable="true" ondragstart="event.dataTransfer.setData('empId','${e.id}');event.dataTransfer.setData('assignId','${a.id}');event.dataTransfer.effectAllowed='move';event.stopPropagation();" style="background:rgba(137,206,255,.12);color:#89ceff;border:1px solid rgba(137,206,255,.3);cursor:grab;">
+          const _seenEmp=new Set();const assignEmpPills=dayAssignments.filter(a=>{if(_seenEmp.has(a.employee_id))return false;_seenEmp.add(a.employee_id);return true;}).map(a=>{const e=employees.find(x=>x.id===a.employee_id);if(!e)return '';return `<div class="cal-pill" draggable="true" ondragstart="event.dataTransfer.setData('empId','${e.id}');event.dataTransfer.setData('assignId','${a.id}');event.dataTransfer.effectAllowed='move';event.stopPropagation();" ondragover="event.preventDefault();event.stopPropagation();const cc=this.closest('.cal-cell');if(cc)cc.classList.add('drag-over');" ondrop="event.preventDefault();event.stopPropagation();const cc=this.closest('.cal-cell');if(cc)handleCellDrop(cc.dataset.site,cc.dataset.date,event);" style="background:rgba(137,206,255,.12);color:#89ceff;border:1px solid rgba(137,206,255,.3);cursor:grab;">
             <span style="width:5px;height:5px;border-radius:50%;background:#89ceff;flex-shrink:0;display:inline-block;"></span>${e.name}
           </div>`;}).join('');
-          pills=taskPills+purchPills+empPills;
+          // Auto-show employees assigned to tasks via item.assigned_to
+          const _assignedEmpIds=new Set(dayAssignments.map(a=>a.employee_id));
+          const _taskEmpIds=dayItems.filter(i=>i.type==='work'&&i.assigned_to).flatMap(i=>(i.assigned_to||'').split(',').map(x=>x.trim()).filter(Boolean));
+          const extraEmpPills=_taskEmpIds.filter(id=>!_assignedEmpIds.has(id)).filter((id,idx,arr)=>arr.indexOf(id)===idx).map(id=>{const e=employees.find(x=>x.id===id);if(!e)return '';return `<div class="cal-pill" draggable="true" ondragstart="event.dataTransfer.setData('empId','${e.id}');event.dataTransfer.effectAllowed='move';event.stopPropagation();" ondragover="event.preventDefault();event.stopPropagation();const cc=this.closest('.cal-cell');if(cc)cc.classList.add('drag-over');" ondrop="event.preventDefault();event.stopPropagation();const cc=this.closest('.cal-cell');if(cc)handleCellDrop(cc.dataset.site,cc.dataset.date,event);" style="background:rgba(137,206,255,.08);color:#89ceff;border:1px dashed rgba(137,206,255,.25);cursor:grab;" title="Auto-assigned via task — drag to reassign">
+            <span style="width:5px;height:5px;border-radius:50%;background:#89ceff;flex-shrink:0;display:inline-block;"></span>${e.name}
+          </div>`;}).join('');
+          pills=taskPills+purchPills+assignEmpPills+extraEmpPills;
         } else {
-          const dayAssignments=assignments.filter(a=>a.employee_id===row.id&&a.work_date===iso);
+          const dayAssignments=assignments.filter(a=>a.employee_id===row.id&&localDate(a.work_date)===iso);
           const sitesForDay=dayAssignments.map(a=>sites.find(s=>s.id===a.site_id)).filter(Boolean);
           pills=sitesForDay.map(s=>`<div class="cal-pill" style="background:${s.color||'#89ceff'}22;color:${s.color||'#89ceff'};border:1px solid ${(s.color||'#89ceff')}44;">
             <span style="width:5px;height:5px;border-radius:50%;background:${s.color||'#89ceff'};flex-shrink:0;display:inline-block;"></span>${s.name}
@@ -953,9 +989,9 @@ function renderCalendar() {
           </div>`).join('');
         }
         const siteIdForAssign = _calView==='site' ? row.id : null;
-        return `<div class="cal-cell ${isToday?'today-col':''}"
+        return `<div class="cal-cell ${isToday?'today-col':''}" data-site="${siteIdForAssign}" data-date="${iso}"
           ondragover="event.preventDefault();this.classList.add('drag-over')"
-          ondragleave="this.classList.remove('drag-over')"
+          ondragleave="if(!this.contains(event.relatedTarget))this.classList.remove('drag-over')"
           ondrop="handleCellDrop('${siteIdForAssign}','${iso}',event)"
           onclick="openAssign('${siteIdForAssign}','${iso}')">
           ${pills}
@@ -979,18 +1015,18 @@ function renderCalendar() {
       <span class="font-semibold text-os" style="font-size:13px;">Unassigned</span>
       <span class="text-osv mono" style="font-size:10px;">employees not assigned today or this week</span>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;">`;
+    <div style="display:grid;grid-template-columns:repeat(7,minmax(86px,1fr));gap:6px;min-width:602px;">`;
 
   days.forEach((d,di)=>{
     const iso=d.toISOString().split('T')[0];
     const isToday=iso===todayISO;
-    const assignedIds=new Set(assignments.filter(a=>a.work_date===iso).map(a=>a.employee_id));
+    const assignedIds=new Set(assignments.filter(a=>localDate(a.work_date)===iso).map(a=>a.employee_id));
     const unassigned=employees.filter(e=>!assignedIds.has(e.id));
     uHtml+=`<div style="background:#171c20;border-radius:8px;padding:8px;border:1px solid ${isToday?'rgba(137,206,255,.25)':'rgba(255,255,255,.04)'};">
       <div class="mono mb-2" style="font-size:9px;letter-spacing:.06em;color:${isToday?'#89ceff':'#3e4850'};">${dayNames2[di]} ${d.getDate()} ${months2[d.getMonth()]}</div>
       ${unassigned.length===0
         ? `<div style="font-size:10px;color:#3e4850;">All assigned</div>`
-        : unassigned.map((e,i)=>`<div draggable="true" ondragstart="event.dataTransfer.setData('empId','${e.id}');event.dataTransfer.effectAllowed='move';" style="font-size:11px;padding:3px 6px;margin-bottom:3px;border-radius:4px;background:${empColors(i)}11;color:${empColors(i)};border:1px solid ${empColors(i)}22;cursor:grab;" title="Drag to assign">${e.name}</div>`).join('')
+        : unassigned.map((e,i)=>`<div draggable="true" ondragstart="event.dataTransfer.setData('empId','${e.id}');event.dataTransfer.effectAllowed='move';" ondragend="document.body.classList.remove('dragging')" style="font-size:11px;padding:3px 6px;margin-bottom:3px;border-radius:4px;background:${empColors(i)}11;color:${empColors(i)};border:1px solid ${empColors(i)}22;cursor:grab;" title="Drag to assign">${e.name}</div>`).join('')
       }
     </div>`;
   });
@@ -1001,9 +1037,12 @@ function renderCalendar() {
 
 async function handleCellDrop(siteId, date, ev) {
   ev.preventDefault();
-  ev.currentTarget.classList.remove('drag-over');
+  // clear drag-over from the cell (use target.closest as fallback)
+  const cell = ev.currentTarget || ev.target.closest('.cal-cell');
+  if (cell) cell.classList.remove('drag-over');
   const itemId = ev.dataTransfer.getData('itemId');
   const empId  = ev.dataTransfer.getData('empId');
+  if (!siteId || siteId==='null') { if(empId) showToast('Switch to Site View to assign','info'); return; }
   if (itemId) {
     // Reschedule task/purchase to new date
     const item = items.find(i=>i.id===itemId);
@@ -1032,7 +1071,7 @@ async function assignEmpToCell(empId, siteId, date, fromAssignId=null) {
     } catch(e) { /* ignore, try to add to new cell anyway */ }
   }
   // Conflict: employee already on a DIFFERENT site this day
-  const conflict = assignments.find(a=>a.employee_id===empId&&a.work_date===date&&a.site_id!==siteId);
+  const conflict = assignments.find(a=>a.employee_id===empId&&localDate(a.work_date)===date&&a.site_id!==siteId);
   if (conflict) {
     const existSite = sites.find(s=>s.id===conflict.site_id);
     const newSite   = sites.find(s=>s.id===siteId);
@@ -1047,16 +1086,15 @@ async function assignEmpToCell(empId, siteId, date, fromAssignId=null) {
     openModal('modalConflict'); return;
   }
   // Already on same site — skip
-  if (assignments.find(a=>a.site_id===siteId&&a.employee_id===empId&&a.work_date===date)) {
+  if (assignments.find(a=>a.site_id===siteId&&a.employee_id===empId&&localDate(a.work_date)===date)) {
     showToast('Already assigned that day','info'); return;
   }
   try {
-    const [a]=await api('POST','assignments',{action:'insert',data:{site_id:siteId,employee_id:empId,work_date:date}});
-    if(a) assignments.push(a);
-    saveCache(); renderCalendar(); renderSiteDetail();
+    await api('POST','assignments',{action:'insert',data:{site_id:siteId,employee_id:empId,work_date:date}});
     const emp=employees.find(e=>e.id===empId);
+    await refreshAssignments();
     showToast((emp?emp.name:'Employee')+' assigned ✓','success');
-  } catch(e) { showToast('Failed to assign','error'); }
+  } catch(e) { showToast('Failed to assign: '+e.message,'error'); console.error('assignEmpToCell:',e); }
 }
 
 async function resolveConflict(choice) {
@@ -1069,7 +1107,7 @@ async function resolveConflict(choice) {
   closeModal('modalConflict');
   try {
     if (choice==='split') {
-      if (!assignments.find(a=>a.site_id===newSiteId&&a.employee_id===empId&&a.work_date===date)) {
+      if (!assignments.find(a=>a.site_id===newSiteId&&a.employee_id===empId&&localDate(a.work_date)===date)) {
         const [a]=await api('POST','assignments',{action:'insert',data:{site_id:newSiteId,employee_id:empId,work_date:date}});
         if(a) assignments.push(a);
       }
@@ -1079,7 +1117,7 @@ async function resolveConflict(choice) {
     } else if (choice==='siteY') {
       await api('POST','assignments',{action:'delete',id:existingId});
       assignments=assignments.filter(a=>a.id!==existingId);
-      if (!assignments.find(a=>a.site_id===newSiteId&&a.employee_id===empId&&a.work_date===date)) {
+      if (!assignments.find(a=>a.site_id===newSiteId&&a.employee_id===empId&&localDate(a.work_date)===date)) {
         const [a]=await api('POST','assignments',{action:'insert',data:{site_id:newSiteId,employee_id:empId,work_date:date}});
         if(a) assignments.push(a);
       }
@@ -1181,6 +1219,10 @@ function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('open');}));
 
+// ── DnD: set body class during drag so pills become click-through ──
+document.addEventListener('dragstart',()=>{document.body.classList.add('dragging');const zone=document.getElementById('calRemoveZone');if(zone)zone.style.display='block';});
+document.addEventListener('dragend',()=>{document.body.classList.remove('dragging');const zone=document.getElementById('calRemoveZone');if(zone){zone.style.display='none';zone.style.background='';zone.style.borderColor='';}});
+
 function selectColor(el, color) {
   selectedColor=color;
   document.getElementById('as-color').value=color;
@@ -1222,7 +1264,7 @@ function openAssign(siteId, date) {
   assigningSiteId=siteId; assigningDate=date; selectedCalEmps=[];
   document.getElementById('assignTitle').textContent=`Assign — ${fmtDate(date)}`;
   const g=document.getElementById('assign-emp-grid');
-  const existing = assignments.filter(a=>a.site_id===siteId&&a.work_date===date).map(a=>a.employee_id);
+  const existing = assignments.filter(a=>a.site_id===siteId&&localDate(a.work_date)===date).map(a=>a.employee_id);
   g.innerHTML=employees.map((e,i)=>`<div class="emp-chip ${existing.includes(e.id)?'sel':''}" style="color:${empColors(i)};border-color:${empColors(i)}44;" onclick="toggleCalEmp('${e.id}',this)">${e.name}</div>`).join('');
   selectedCalEmps=[...existing];
   openModal('modalAssign');
@@ -1242,6 +1284,39 @@ function openFinance(siteId){
   document.querySelector('#modalFinance .font-bold').textContent='Add Finance Entry';
   document.getElementById('fin-submit-btn').textContent='Add Entry';
   openModal('modalFinance');
+}
+
+// ── REFRESH ASSIGNMENTS FROM SHEETS (called after every mutation) ──
+
+async function handleRemoveDrop(ev) {
+  ev.preventDefault();
+  const empId   = ev.dataTransfer.getData('empId');
+  const assignId = ev.dataTransfer.getData('assignId');
+  if (!empId) return;
+  if (!assignId || assignId === 'undefined') {
+    showToast('This employee is auto-linked via a task — edit from the site page to remove', 'info');
+    return;
+  }
+  try {
+    await api('POST', 'assignments', {action: 'delete', id: assignId});
+    assignments = assignments.filter(a => a.id !== assignId);
+    saveCache();
+    renderCalendar();
+    renderSiteDetail();
+    showToast('Employee unassigned ✓', 'success');
+  } catch(e) {
+    showToast('Failed to unassign: ' + e.message, 'error');
+    await refreshAssignments();
+  }
+}
+
+async function refreshAssignments() {
+  try {
+    assignments = await api('GET','assignments');
+    saveCache();
+    renderCalendar();
+    renderSiteDetail();
+  } catch(e) { console.error('refreshAssignments failed:',e); }
 }
 
 // ── SUBMIT ACTIONS ──
@@ -1337,15 +1412,23 @@ async function removeStock(id) {
 
 async function submitAssign() {
   if (!assigningSiteId){closeModal('modalAssign');return;}
+  closeModal('modalAssign');
+  showToast('Saving…','info');
+  // diff: only add new, only remove deselected — no deleteFilter needed
+  const existingAsgns = assignments.filter(a=>a.site_id===assigningSiteId&&localDate(a.work_date)===assigningDate);
+  const existingIds   = existingAsgns.map(a=>a.employee_id);
+  const toAdd    = selectedCalEmps.filter(id=>!existingIds.includes(id));
+  const toRemove = existingAsgns.filter(a=>!selectedCalEmps.includes(a.employee_id));
   try {
-    await api('POST','assignments',{action:'deleteFilter',filter:{site_id:assigningSiteId,work_date:assigningDate}});
-    assignments=assignments.filter(a=>!(a.site_id===assigningSiteId&&a.work_date===assigningDate));
-    for (const empId of selectedCalEmps) {
-      const [a]=await api('POST','assignments',{action:'insert',data:{site_id:assigningSiteId,employee_id:empId,work_date:assigningDate}});
-      if(a)assignments.push(a);
+    for (const a of toRemove) {
+      await api('POST','assignments',{action:'delete',id:a.id});
     }
-    saveCache(); closeModal('modalAssign'); renderCalendar(); renderSiteDetail(); showToast('Assignment saved ✓','success');
-  } catch(e){showToast('Failed: '+e.message,'error');}
+    for (const empId of toAdd) {
+      await api('POST','assignments',{action:'insert',data:{site_id:assigningSiteId,employee_id:empId,work_date:assigningDate}});
+    }
+    await refreshAssignments();
+    showToast('Assignment saved ✓','success');
+  } catch(e){ showToast('Failed: '+e.message,'error'); console.error('submitAssign error:',e); await refreshAssignments(); }
 }
 
 async function submitFinance() {
