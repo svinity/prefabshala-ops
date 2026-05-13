@@ -63,11 +63,11 @@ details[open] .chevron{transform:rotate(180deg);}
 .toggle-track.on{background:#4edea3;}
 .toggle-thumb{width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3);}
 .toggle-track.on .toggle-thumb{transform:translateX(20px);}
-.cal-cell{min-height:80px;padding:4px;border-right:1px solid rgba(255,255,255,.04);cursor:pointer;}
+.cal-cell{min-height:80px;padding:4px;border-right:1px solid rgba(255,255,255,.04);cursor:pointer;width:86px;overflow:hidden;box-sizing:border-box;}
 .cal-cell:hover{background:rgba(137,206,255,.04);}
 .cal-cell.today-col{background:rgba(137,206,255,.05);}
 .cal-cell.drag-over{background:rgba(137,206,255,.15);outline:2px dashed rgba(137,206,255,.5);outline-offset:-2px;}
-.cal-pill{font-size:9px;padding:2px 5px;border-radius:4px;margin-bottom:2px;display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden;}
+.cal-pill{font-size:9px;padding:2px 5px;border-radius:4px;margin-bottom:2px;display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;cursor:default;}
 .emp-chip{font-size:11px;padding:4px 10px;border-radius:7px;border:1px solid;cursor:pointer;transition:all .15s;}
 .emp-chip.sel{border-color:#89ceff;background:rgba(137,206,255,.12);color:#89ceff;}
 .status-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;letter-spacing:.06em;text-transform:uppercase;}
@@ -190,7 +190,7 @@ details[open] .chevron{transform:rotate(180deg);}
     </div>
     <!-- Calendar grid container -->
     <div class="overflow-x-auto -mx-4">
-      <div id="calGrid" style="min-width:600px;padding:0 16px;"></div>
+      <div id="calGrid" style="min-width:682px;padding:0 16px;"></div>
     </div>
     <!-- Unassigned employees section (site view only) -->
     <div id="calUnassigned"></div>
@@ -275,7 +275,7 @@ details[open] .chevron{transform:rotate(180deg);}
         <span class="ms fill text-pri" style="font-size:32px;">architecture</span>
         <span class="font-bold text-os" style="font-size:20px;">Prefabshala</span>
       </div>
-      <div class="text-osv mono text-xs tracking-widest uppercase">Operations Suite v7.0</div>
+      <div class="text-osv mono text-xs tracking-widest uppercase">Operations Suite v9.0</div>
       <div class="text-osv text-xs mt-2 italic">Built for precision. Engineered for scale.</div>
     </div>
   </div>
@@ -352,13 +352,18 @@ details[open] .chevron{transform:rotate(180deg);}
   <input type="hidden" id="ai-item-id"/>
   <input type="hidden" id="ai-item-type"/>
   <label class="lbl">Description</label><input class="inp" id="ai-title" placeholder="What needs to be done?"/>
-  <label class="lbl">Due Date</label><input class="inp" id="ai-date" type="date"/>
-  <label class="lbl">Assign To</label>
-  <div class="flex flex-wrap gap-2 mb-3" id="ai-emp-grid"></div>
-  <input type="hidden" id="ai-assigned"/>
+  <div id="ai-date-section"><label class="lbl">Due Date</label><input class="inp" id="ai-date" type="date"/></div>
+  <div id="ai-emp-section">
+    <label class="lbl">Assign To</label>
+    <div class="flex flex-wrap gap-2 mb-3" id="ai-emp-grid"></div>
+    <input type="hidden" id="ai-assigned"/>
+  </div>
   <div id="ai-purchase-fields" style="display:none;">
     <label class="lbl">Vendor</label><input class="inp" id="ai-vendor" placeholder="Vendor name"/>
     <label class="lbl">Amount (₹)</label><input class="inp" id="ai-amount" type="number" placeholder="0"/>
+  </div>
+  <div id="ai-material-fields" style="display:none;">
+    <label class="lbl">Quantity / Unit</label><input class="inp" id="ai-qty" placeholder="e.g. 50 sqm, 200 pcs, 10 bags"/>
   </div>
   <button class="btn-pri" id="ai-submit-btn" onclick="submitAddItem()">Add</button>
 </div>
@@ -411,6 +416,37 @@ details[open] .chevron{transform:rotate(180deg);}
   <label class="lbl">Select Employees</label>
   <div class="flex flex-wrap gap-2 mb-4" id="assign-emp-grid"></div>
   <button class="btn-pri" onclick="submitAssign()">Save Assignment</button>
+</div>
+</div>
+
+<!-- Employee Conflict Modal -->
+<div class="modal-bg" id="modalConflict">
+<div class="modal">
+  <div class="flex items-center gap-3 mb-5">
+    <span class="ms fill text-err" style="font-size:32px;">warning</span>
+    <div>
+      <div class="font-bold text-os text-lg">Schedule Conflict</div>
+      <div id="conflictDesc" class="text-osv text-sm mt-0.5"></div>
+    </div>
+  </div>
+  <input type="hidden" id="cf-emp-id"/>
+  <input type="hidden" id="cf-date"/>
+  <input type="hidden" id="cf-existing-id"/>
+  <input type="hidden" id="cf-new-site-id"/>
+  <div class="flex flex-col gap-2">
+    <button onclick="resolveConflict('split')" class="btn-sec" style="background:rgba(78,222,163,.08);border-color:rgba(78,222,163,.4);color:#4edea3;text-align:left;padding:12px 16px;">
+      <div class="font-bold">Split — work both sites</div>
+      <div style="font-size:11px;opacity:.7;margin-top:2px;">Employee covers both sites this day</div>
+    </button>
+    <button id="cfBtnSiteX" onclick="resolveConflict('siteX')" class="btn-sec" style="text-align:left;padding:12px 16px;">
+      <div class="font-bold">Keep on <span id="conflictSiteX" style="color:#89ceff;"></span></div>
+      <div style="font-size:11px;opacity:.7;margin-top:2px;">Cancel new assignment, stay on original site</div>
+    </button>
+    <button id="cfBtnSiteY" onclick="resolveConflict('siteY')" class="btn-sec" style="background:rgba(137,206,255,.08);border-color:rgba(137,206,255,.4);color:#89ceff;text-align:left;padding:12px 16px;">
+      <div class="font-bold">Move to <span id="conflictSiteY" style="color:#89ceff;"></span></div>
+      <div style="font-size:11px;opacity:.7;margin-top:2px;">Remove from original site, assign to new one</div>
+    </button>
+  </div>
 </div>
 </div>
 
@@ -490,28 +526,52 @@ async function api(method, table, opts={}) {
   }
 }
 
+// ── CACHE (5-min TTL for instant loads) ──
+const CACHE_KEY='pf_cache_v9', CACHE_TTL=5*60*1000;
+function saveCache(){try{localStorage.setItem(CACHE_KEY,JSON.stringify({ts:Date.now(),sites,employees,items,visits,assignments,stockItems,financeEntries}));}catch(e){}}
+function loadCache(){try{const c=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');if(c&&Date.now()-c.ts<CACHE_TTL){sites=c.sites||[];employees=c.employees||[];items=c.items||[];visits=c.visits||[];assignments=c.assignments||[];stockItems=c.stockItems||[];financeEntries=c.financeEntries||[];return true;}}catch(e){}return false;}
+
+function renderAll(){
+  updateHUD(); renderSiteChips();
+  if(sites.length>0){activeSiteId=activeSiteId||sites.find(s=>s.type!=='factory'&&s.status!=='done')?.id;}
+  renderSiteDetail(); renderFactory(); renderProspects();
+  renderSettingsEmployees(); renderSettingsSites(); renderSettingsStock();
+  renderCalendar();
+}
+
+// ── SMART RENDER — only re-render visible page ──
+function smartRender(){
+  updateHUD();
+  const active=document.querySelector('.page.active')?.id;
+  if(active==='page-sites'){renderSiteChips();renderSiteDetail();}
+  else if(active==='page-factory'){renderFactory();}
+  else if(active==='page-calendar'){renderCalendar();}
+  else if(active==='page-settings'){renderSettingsEmployees();renderSettingsSites();renderSettingsStock();}
+  else if(active==='page-prospects'){renderProspects();}
+}
+
 // ── LOAD ──
 async function loadAll() {
+  // 1. Render from cache immediately (feels instant)
+  if(loadCache()){
+    renderAll();
+    showToast('Loading fresh data…','info');
+  }
+  // 2. Fetch all 7 tables in parallel
   try {
-    [sites, employees, items, visits, assignments] = await Promise.all([
+    const results = await Promise.all([
       api('GET','sites'),
       api('GET','employees'),
       api('GET','items'),
       api('GET','visits'),
-      api('GET','assignments')
+      api('GET','assignments'),
+      api('GET','stock_items').catch(()=>[]),
+      api('GET','finance_entries').catch(()=>[]),
     ]);
-    try { stockItems = await api('GET','stock_items'); } catch(e){ stockItems=[]; }
-    try { financeEntries = await api('GET','finance_entries'); } catch(e){ financeEntries=[]; }
-    
-    updateHUD();
-    renderSiteChips();
-    if (sites.length>0){ activeSiteId=activeSiteId||sites.find(s=>s.type!=='factory'&&s.status!=='done')?.id; renderSiteDetail(); }
-    renderFactory();
-    renderProspects();
-    renderSettingsEmployees();
-    renderSettingsSites();
-    renderSettingsStock();
-    renderCalendar();
+    [sites,employees,items,visits,assignments,stockItems,financeEntries]=results;
+    saveCache();
+    renderAll();
+    showToast('',''); // clear toast
   } catch(e) { showToast('Failed to load data','error'); console.error(e); }
 }
 
@@ -658,6 +718,20 @@ function renderSiteDetail() {
         </div>
       </details>
 
+      <!-- Materials Checklist -->
+      <details>
+        <summary class="section-btn" style="border-top:1px solid rgba(255,255,255,.06);">
+          <div class="flex items-center gap-2"><span class="ms" style="color:#4edea3;">inventory</span><span class="font-semibold">Materials</span><span class="mono text-xs text-osv ml-1">${siteItems.filter(i=>i.type==='material'&&i.status!=='done').length} pending</span></div>
+          <span class="ms text-osv chevron">expand_more</span>
+        </summary>
+        <div class="px-4 pb-2">
+          ${renderMaterialList(siteItems.filter(i=>i.type==='material'))}
+          <button onclick="openAddItemFor('${site.id}','material')" class="w-full border border-dashed border-ov rounded-lg py-2 text-osv text-sm flex items-center justify-center gap-1 mt-2 hover:border-sec hover:text-sec transition-colors">
+            <span class="ms" style="font-size:16px;">add</span>Add Material
+          </button>
+        </div>
+      </details>
+
       <!-- Finance -->
       <details>
         <summary class="section-btn" style="border-top:1px solid rgba(255,255,255,.06);">
@@ -738,6 +812,25 @@ function renderItemList(list, type) {
     </div>`;}).join('');
 }
 
+function renderMaterialList(list) {
+  if (!list.length) return '<div class="text-osv text-sm py-2">No materials listed yet.</div>';
+  const sorted=[...list].sort((a,b)=>(a.status==='done'?1:-1)-(b.status==='done'?1:-1));
+  return sorted.map(item=>`
+    <div class="item-row">
+      <button onclick="toggleItem('${item.id}','${item.status}')" class="flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${item.status==='done'?'bg-sec border-sec':'border-sec/50'}" style="font-size:11px;">
+        ${item.status==='done'?'<span class="ms fill" style="font-size:14px;color:#003824;">check</span>':''}
+      </button>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm ${item.status==='done'?'line-through text-osv':'text-os'}">${item.title}</div>
+        ${item.vendor?`<div class="mono text-xs text-osv mt-0.5">${item.vendor}</div>`:''}
+      </div>
+      ${item.status==='done'
+        ?`<span class="mono" style="font-size:9px;background:rgba(78,222,163,.12);color:#4edea3;border:1px solid rgba(78,222,163,.3);padding:2px 6px;border-radius:4px;">ARRIVED</span>`
+        :`<span class="mono" style="font-size:9px;color:#3e4850;padding:2px 6px;">PENDING</span>`}
+      <button onclick="deleteItem('${item.id}')" class="ms text-osv hover:text-err flex-shrink-0" style="font-size:16px;">delete</button>
+    </div>`).join('');
+}
+
 function fmtMoney(n) {
   if (n>=100000) return (n/100000).toFixed(1)+'L';
   if (n>=1000) return (n/1000).toFixed(0)+'k';
@@ -811,7 +904,7 @@ function renderCalendar() {
 
   const todayISO = todayStr();
   
-  let html = `<div style="display:grid;grid-template-columns:90px repeat(7,1fr);border-bottom:1px solid rgba(255,255,255,.06);">
+  let html = `<div style="display:grid;grid-template-columns:80px repeat(7,86px);border-bottom:1px solid rgba(255,255,255,.06);">
     <div class="p-2"></div>
     ${days.map((d,i)=>{
       const iso=d.toISOString().split('T')[0];
@@ -824,8 +917,8 @@ function renderCalendar() {
   </div>`;
 
   rows.forEach((row,ri)=>{
-    html+=`<div style="display:grid;grid-template-columns:90px repeat(7,1fr);border-bottom:1px solid rgba(255,255,255,.04);">
-      <div class="p-2 flex flex-col justify-center" style="background:#171c20;border-right:1px solid rgba(255,255,255,.06);">
+    html+=`<div style="display:grid;grid-template-columns:80px repeat(7,86px);border-bottom:1px solid rgba(255,255,255,.04);">
+      <div class="p-2 flex flex-col justify-center" style="background:#171c20;border-right:1px solid rgba(255,255,255,.06);width:80px;overflow:hidden;">
         <div class="mono" style="font-size:8px;letter-spacing:.08em;color:#89ceff;">${_calView==='site'?'SITE':'PERSON'}</div>
         <div class="font-bold text-os" style="font-size:11px;">${row.name}</div>
       </div>
@@ -835,19 +928,18 @@ function renderCalendar() {
         let pills='';
         if (_calView==='site') {
           const dayAssignments=assignments.filter(a=>a.site_id===row.id&&a.work_date===iso);
-          const emps=dayAssignments.map(a=>employees.find(e=>e.id===a.employee_id)).filter(Boolean);
-          pills=emps.map((e,i)=>`<div class="cal-pill" style="background:${empColors(i)}22;color:${empColors(i)};border:1px solid ${empColors(i)}44;">
-            <span style="width:5px;height:5px;border-radius:50%;background:${empColors(i)};flex-shrink:0;display:inline-block;"></span>${e.name}
-          </div>`).join('');
-          // Add task & purchase due dates
+          // ORDER: Tasks (red, top) → Purchases (orange) → Employees (blue, bottom)
           const dayItems=items.filter(i=>i.site_id===row.id&&i.status!=='done'&&i.due_date&&(i.due_date.includes('T')?i.due_date.split('T')[0]:i.due_date)===iso);
-          const taskPills=dayItems.filter(i=>i.type==='work').map(i=>`<div class="cal-pill" style="background:rgba(137,206,255,.12);color:#89ceff;border:1px solid rgba(137,206,255,.3);">
+          const taskPills=dayItems.filter(i=>i.type==='work').map(i=>`<div class="cal-pill" draggable="true" ondragstart="event.dataTransfer.setData('itemId','${i.id}');event.dataTransfer.effectAllowed='move';event.stopPropagation();" style="background:rgba(255,80,80,.15);color:#ff6b6b;border:1px solid rgba(255,80,80,.35);cursor:grab;">
             <span class="ms" style="font-size:8px;flex-shrink:0;">task_alt</span>${i.title}
           </div>`).join('');
-          const purchPills=dayItems.filter(i=>i.type==='purchase').map(i=>`<div class="cal-pill" style="background:rgba(255,184,110,.12);color:#ffb86e;border:1px solid rgba(255,184,110,.3);">
+          const purchPills=dayItems.filter(i=>i.type==='purchase').map(i=>`<div class="cal-pill" draggable="true" ondragstart="event.dataTransfer.setData('itemId','${i.id}');event.dataTransfer.effectAllowed='move';event.stopPropagation();" style="background:rgba(255,184,110,.15);color:#ffb86e;border:1px solid rgba(255,184,110,.35);cursor:grab;">
             <span class="ms" style="font-size:8px;flex-shrink:0;">shopping_cart</span>${i.title}
           </div>`).join('');
-          pills+=taskPills+purchPills;
+          const empPills=dayAssignments.map(a=>{const e=employees.find(x=>x.id===a.employee_id);if(!e)return '';return `<div class="cal-pill" draggable="true" ondragstart="event.dataTransfer.setData('empId','${e.id}');event.dataTransfer.setData('assignId','${a.id}');event.dataTransfer.effectAllowed='move';event.stopPropagation();" style="background:rgba(137,206,255,.12);color:#89ceff;border:1px solid rgba(137,206,255,.3);cursor:grab;">
+            <span style="width:5px;height:5px;border-radius:50%;background:#89ceff;flex-shrink:0;display:inline-block;"></span>${e.name}
+          </div>`;}).join('');
+          pills=taskPills+purchPills+empPills;
         } else {
           const dayAssignments=assignments.filter(a=>a.employee_id===row.id&&a.work_date===iso);
           const sitesForDay=dayAssignments.map(a=>sites.find(s=>s.id===a.site_id)).filter(Boolean);
@@ -864,7 +956,7 @@ function renderCalendar() {
         return `<div class="cal-cell ${isToday?'today-col':''}"
           ondragover="event.preventDefault();this.classList.add('drag-over')"
           ondragleave="this.classList.remove('drag-over')"
-          ondrop="dropEmpOnCell('${siteIdForAssign}','${iso}',event)"
+          ondrop="handleCellDrop('${siteIdForAssign}','${iso}',event)"
           onclick="openAssign('${siteIdForAssign}','${iso}')">
           ${pills}
           <div style="font-size:9px;color:#3e4850;margin-top:2px;">+</div>
@@ -907,22 +999,94 @@ function renderCalendar() {
   unassignedEl.innerHTML=uHtml;
 }
 
-async function dropEmpOnCell(siteId, date, ev) {
+async function handleCellDrop(siteId, date, ev) {
   ev.preventDefault();
   ev.currentTarget.classList.remove('drag-over');
-  const empId = ev.dataTransfer.getData('empId');
-  if (!empId) { showToast('Drag an employee chip','info'); return; }
-  if (!siteId) { showToast('Drop on a site row','info'); return; }
+  const itemId = ev.dataTransfer.getData('itemId');
+  const empId  = ev.dataTransfer.getData('empId');
+  if (itemId) {
+    // Reschedule task/purchase to new date
+    const item = items.find(i=>i.id===itemId);
+    if (!item) return;
+    const cur = item.due_date?(item.due_date.includes('T')?item.due_date.split('T')[0]:item.due_date):null;
+    if (cur===date) { showToast('Already on this date','info'); return; }
+    try {
+      await api('POST','items',{action:'update',id:itemId,data:{due_date:date}});
+      item.due_date=date;
+      saveCache(); renderCalendar(); renderSiteDetail();
+      showToast('Rescheduled to '+date+' ✓','success');
+    } catch(e) { showToast('Failed to reschedule','error'); }
+  } else if (empId) {
+    const assignId = ev.dataTransfer.getData('assignId');
+    await assignEmpToCell(empId, siteId, date, assignId);
+  }
+}
+
+async function assignEmpToCell(empId, siteId, date, fromAssignId=null) {
+  if (!empId || !siteId) { showToast('Drop on a site row','info'); return; }
+  // If moving from another cell, remove that assignment first
+  if (fromAssignId) {
+    try {
+      await api('POST','assignments',{action:'delete',id:fromAssignId});
+      assignments=assignments.filter(a=>a.id!==fromAssignId);
+    } catch(e) { /* ignore, try to add to new cell anyway */ }
+  }
+  // Conflict: employee already on a DIFFERENT site this day
+  const conflict = assignments.find(a=>a.employee_id===empId&&a.work_date===date&&a.site_id!==siteId);
+  if (conflict) {
+    const existSite = sites.find(s=>s.id===conflict.site_id);
+    const newSite   = sites.find(s=>s.id===siteId);
+    const emp       = employees.find(e=>e.id===empId);
+    document.getElementById('cf-emp-id').value      = empId;
+    document.getElementById('cf-date').value         = date;
+    document.getElementById('cf-existing-id').value  = conflict.id;
+    document.getElementById('cf-new-site-id').value  = siteId;
+    document.getElementById('conflictDesc').textContent = `${emp?.name||'Employee'} is already on ${existSite?.name||'another site'} this day.`;
+    document.getElementById('conflictSiteX').textContent = existSite?.name||'existing site';
+    document.getElementById('conflictSiteY').textContent = newSite?.name||'new site';
+    openModal('modalConflict'); return;
+  }
+  // Already on same site — skip
   if (assignments.find(a=>a.site_id===siteId&&a.employee_id===empId&&a.work_date===date)) {
     showToast('Already assigned that day','info'); return;
   }
   try {
     const [a]=await api('POST','assignments',{action:'insert',data:{site_id:siteId,employee_id:empId,work_date:date}});
     if(a) assignments.push(a);
-    renderCalendar(); renderSiteDetail();
+    saveCache(); renderCalendar(); renderSiteDetail();
     const emp=employees.find(e=>e.id===empId);
     showToast((emp?emp.name:'Employee')+' assigned ✓','success');
   } catch(e) { showToast('Failed to assign','error'); }
+}
+
+async function resolveConflict(choice) {
+  const empId      = document.getElementById('cf-emp-id').value;
+  const date       = document.getElementById('cf-date').value;
+  const existingId = document.getElementById('cf-existing-id').value;
+  const newSiteId  = document.getElementById('cf-new-site-id').value;
+  const siteXName  = document.getElementById('conflictSiteX').textContent;
+  const siteYName  = document.getElementById('conflictSiteY').textContent;
+  closeModal('modalConflict');
+  try {
+    if (choice==='split') {
+      if (!assignments.find(a=>a.site_id===newSiteId&&a.employee_id===empId&&a.work_date===date)) {
+        const [a]=await api('POST','assignments',{action:'insert',data:{site_id:newSiteId,employee_id:empId,work_date:date}});
+        if(a) assignments.push(a);
+      }
+      showToast('Split — working both sites ✓','success');
+    } else if (choice==='siteX') {
+      showToast('Kept on '+siteXName,'info');
+    } else if (choice==='siteY') {
+      await api('POST','assignments',{action:'delete',id:existingId});
+      assignments=assignments.filter(a=>a.id!==existingId);
+      if (!assignments.find(a=>a.site_id===newSiteId&&a.employee_id===empId&&a.work_date===date)) {
+        const [a]=await api('POST','assignments',{action:'insert',data:{site_id:newSiteId,employee_id:empId,work_date:date}});
+        if(a) assignments.push(a);
+      }
+      showToast('Moved to '+siteYName+' ✓','success');
+    }
+    saveCache(); renderCalendar(); renderSiteDetail();
+  } catch(e) { showToast('Failed','error'); }
 }
 
 function getWeekNum(d) {
@@ -1028,10 +1192,18 @@ function openAddItemFor(siteId, type) {
   document.getElementById('ai-site-id').value=siteId;
   document.getElementById('ai-item-id').value='';
   document.getElementById('ai-item-type').value=type;
-  document.getElementById('addItemTitle').textContent=type==='purchase'?'Add Purchase':'Add Task';
+  const titles={work:'Add Task',purchase:'Add Purchase',material:'Add Material'};
+  document.getElementById('addItemTitle').textContent=titles[type]||'Add Item';
   document.getElementById('ai-submit-btn').textContent='Add';
   document.getElementById('ai-date').value=todayStr();
+  // Show/hide sections per type
+  document.getElementById('ai-date-section').style.display=type==='material'?'none':'block';
+  document.getElementById('ai-emp-section').style.display=type==='material'?'none':'block';
   document.getElementById('ai-purchase-fields').style.display=type==='purchase'?'block':'none';
+  document.getElementById('ai-material-fields').style.display=type==='material'?'block':'none';
+  document.getElementById('ai-vendor').value='';
+  document.getElementById('ai-amount').value='';
+  document.getElementById('ai-qty').value='';
   // Emp grid
   const g=document.getElementById('ai-emp-grid');
   g.innerHTML=employees.map((e,i)=>`<div class="emp-chip" style="color:${empColors(i)};border-color:${empColors(i)}44;" onclick="toggleItemEmp('${e.id}',this)">${e.name}</div>`).join('');
@@ -1090,7 +1262,8 @@ async function submitAddItem() {
   const siteId=document.getElementById('ai-site-id').value;
   const type=document.getElementById('ai-item-type').value;
   const editId=document.getElementById('ai-item-id').value;
-  const body={site_id:siteId,type,title,due_date:document.getElementById('ai-date').value||null,vendor:document.getElementById('ai-vendor').value||null,amount:document.getElementById('ai-amount').value||null,assigned_to:selectedItemEmps.join(',')||null};
+  const vendorVal = type==='material' ? (document.getElementById('ai-qty').value||null) : (document.getElementById('ai-vendor').value||null);
+  const body={site_id:siteId,type,title,due_date:type==='material'?null:(document.getElementById('ai-date').value||null),vendor:vendorVal,amount:document.getElementById('ai-amount').value||null,assigned_to:type==='material'?null:(selectedItemEmps.join(',')||null)};
   try {
     if (editId) {
       await api('POST','items',{action:'update',id:editId,data:body});
@@ -1171,7 +1344,7 @@ async function submitAssign() {
       const [a]=await api('POST','assignments',{action:'insert',data:{site_id:assigningSiteId,employee_id:empId,work_date:assigningDate}});
       if(a)assignments.push(a);
     }
-    closeModal('modalAssign'); renderCalendar(); renderSiteDetail(); showToast('Assignment saved ✓','success');
+    saveCache(); closeModal('modalAssign'); renderCalendar(); renderSiteDetail(); showToast('Assignment saved ✓','success');
   } catch(e){showToast('Failed: '+e.message,'error');}
 }
 
@@ -1261,32 +1434,25 @@ async function sendChat() {
   const msg=input.value.trim();
   if (!msg) return;
   if (!aiKey){showToast('Add API key in Settings','error');return;}
-
   const btn=document.getElementById('chatSendBtn');
   btn.innerHTML='<div class="ms" style="font-size:20px;animation:spin .8s linear infinite;display:inline-block;">refresh</div>';
   input.value='';
-
   const respEl=document.getElementById('aiResponse');
   const respTxt=document.getElementById('aiResponseText');
   respEl.style.display='block';
   respTxt.textContent='⏳ Processing...';
-
-  const context = {
-    sites: sites.filter(s=>s.type!=='factory').map(s=>({id:s.id,name:s.name,status:s.status})),
-    factory: sites.find(s=>s.type==='factory'),
-    employees: employees.map(e=>({id:e.id,name:e.name})),
-    today: todayStr(),
-    pending_items: items.filter(i=>i.status==='pending').map(i=>({id:i.id,site_id:i.site_id,type:i.type,title:i.title,due_date:i.due_date}))
+  const context={
+    sites:sites.filter(s=>s.type!=='factory').map(s=>({id:s.id,name:s.name,status:s.status})),
+    factory:sites.find(s=>s.type==='factory'),
+    employees:employees.map(e=>({id:e.id,name:e.name})),
+    today:todayStr(),
+    pending_items:items.filter(i=>i.status==='pending').map(i=>({id:i.id,site_id:i.site_id,type:i.type,title:i.title,due_date:i.due_date}))
   };
-
   const systemPrompt=`You are a COO assistant for Prefabshala, a prefab construction company.
 Parse the user's natural language and return a JSON action to update the ops dashboard.
-
 Context: ${JSON.stringify(context)}
-
 Return ONLY valid JSON:
 {"action":"add_item|complete_item|add_site|add_visit|assign_employee|update_site_status|add_finance","data":{...},"message":"Human readable confirmation"}
-
 For add_item: {site_name, type ("work"|"purchase"), title, due_date (YYYY-MM-DD), vendor?, amount?}
 For complete_item: {item_title}
 For add_site: {name, status ("active"|"hold"), deadline?}
@@ -1294,9 +1460,7 @@ For add_visit: {client_name, visit_date, notes?}
 For assign_employee: {employee_name, site_name, date}
 For update_site_status: {site_name, status}
 For add_finance: {site_name, type ("expense"|"received"), description, amount}
-
 Match names fuzzy. Infer "tomorrow"=next day, day names=upcoming day. Factory-related items go to factory site.`;
-
   try {
     let result;
     if (aiProvider==='openai') {
@@ -1309,7 +1473,6 @@ Match names fuzzy. Infer "tomorrow"=next day, day names=upcoming day. Factory-re
       if(d.error) throw new Error(d.error.message);
       result=JSON.parse(d.choices[0].message.content);
     } else {
-      // Claude via proxy
       const proxyUrl='https://corsproxy.io/?'+encodeURIComponent('https://api.anthropic.com/v1/messages');
       const r=await fetch(proxyUrl,{
         method:'POST',
@@ -1321,7 +1484,6 @@ Match names fuzzy. Infer "tomorrow"=next day, day names=upcoming day. Factory-re
       const txt=d.content?.[0]?.text||'{}';
       result=JSON.parse(txt.replace(/```json|```/g,'').trim());
     }
-
     await executeAIAction(result);
     respTxt.textContent='✓ '+result.message;
     setTimeout(()=>{respEl.style.display='none';},4000);
@@ -1333,63 +1495,56 @@ Match names fuzzy. Infer "tomorrow"=next day, day names=upcoming day. Factory-re
 }
 
 async function executeAIAction({action,data}) {
-  const findSite = (name) => sites.find(s=>s.name.toLowerCase().includes((name||'').toLowerCase()));
-  const findEmp = (name) => employees.find(e=>e.name.toLowerCase().includes((name||'').toLowerCase()));
-  const resolveDate = (str) => {
-    if (!str) return null;
-    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
-    const d=new Date(str); return isNaN(d)?null:d.toISOString().split('T')[0];
+  const findSite=(name)=>sites.find(s=>s.name.toLowerCase().includes((name||'').toLowerCase()));
+  const findEmp=(name)=>employees.find(e=>e.name.toLowerCase().includes((name||'').toLowerCase()));
+  const resolveDate=(str)=>{
+    if(!str)return null;
+    if(/^\d{4}-\d{2}-\d{2}$/.test(str))return str;
+    const d=new Date(str);return isNaN(d)?null:d.toISOString().split('T')[0];
   };
-
-  if (action==='add_item') {
+  if(action==='add_item'){
     const site=findSite(data.site_name)||sites.find(s=>s.type!=='factory'&&s.status==='active')||sites[0];
-    if (!site){showToast('Site not found','error');return;}
-    const [item]=await api('POST','items',{action:'insert',data:{site_id:site.id,type:data.type||'work',title:data.title,due_date:resolveDate(data.due_date),status:'pending',vendor:data.vendor||null,amount:data.amount||null}});
-    items.push(item); renderSiteDetail(); renderFactory(); updateHUD();
-  }
-  else if (action==='complete_item') {
+    if(!site){showToast('Site not found','error');return;}
+    const[item]=await api('POST','items',{action:'insert',data:{site_id:site.id,type:data.type||'work',title:data.title,due_date:resolveDate(data.due_date),status:'pending',vendor:data.vendor||null,amount:data.amount||null}});
+    items.push(item);saveCache();renderSiteDetail();renderFactory();updateHUD();
+  } else if(action==='complete_item'){
     const item=items.find(i=>i.title.toLowerCase().includes((data.item_title||'').toLowerCase())&&i.status==='pending');
-    if (item){await api('POST','items',{action:'update',id:item.id,data:{status:'done'}});item.status='done';renderSiteDetail();renderFactory();updateHUD();}
+    if(item){await api('POST','items',{action:'update',id:item.id,data:{status:'done'}});item.status='done';saveCache();renderSiteDetail();renderFactory();updateHUD();}
     else showToast('Item not found','error');
-  }
-  else if (action==='add_site') {
-    const [site]=await api('POST','sites',{action:'insert',data:{name:data.name,status:data.status||'active',deadline:resolveDate(data.deadline),color:'#89ceff'}});
-    sites.push(site); activeSiteId=site.id; renderSiteChips(); renderSiteDetail(); renderSettingsSites(); updateHUD();
-  }
-  else if (action==='add_visit') {
-    const [v]=await api('POST','visits',{action:'insert',data:{client_name:data.client_name,visit_date:resolveDate(data.visit_date),notes:data.notes||null,status:'scheduled'}});
-    visits.push(v); renderProspects();
-  }
-  else if (action==='assign_employee') {
-    const emp=findEmp(data.employee_name); const site=findSite(data.site_name);
-    if (emp&&site){const[a]=await api('POST','assignments',{action:'insert',data:{site_id:site.id,employee_id:emp.id,work_date:resolveDate(data.date)||todayStr()}});if(a)assignments.push(a);renderCalendar();renderSiteDetail();}
-  }
-  else if (action==='update_site_status') {
+  } else if(action==='add_site'){
+    const[site]=await api('POST','sites',{action:'insert',data:{name:data.name,status:data.status||'active',deadline:resolveDate(data.deadline),color:'#89ceff'}});
+    sites.push(site);activeSiteId=site.id;saveCache();renderSiteChips();renderSiteDetail();renderSettingsSites();updateHUD();
+  } else if(action==='add_visit'){
+    const[v]=await api('POST','visits',{action:'insert',data:{client_name:data.client_name,visit_date:resolveDate(data.visit_date),notes:data.notes||null,status:'scheduled'}});
+    visits.push(v);saveCache();renderProspects();
+  } else if(action==='assign_employee'){
+    const emp=findEmp(data.employee_name);const site=findSite(data.site_name);
+    if(emp&&site){const[a]=await api('POST','assignments',{action:'insert',data:{site_id:site.id,employee_id:emp.id,work_date:resolveDate(data.date)||todayStr()}});if(a)assignments.push(a);saveCache();renderCalendar();renderSiteDetail();}
+  } else if(action==='update_site_status'){
     const site=findSite(data.site_name);
-    if (site){await api('POST','sites',{action:'update',id:site.id,data:{status:data.status}});site.status=data.status;renderSiteChips();renderSiteDetail();updateHUD();}
-  }
-  else if (action==='add_finance') {
+    if(site){await api('POST','sites',{action:'update',id:site.id,data:{status:data.status}});site.status=data.status;saveCache();renderSiteChips();renderSiteDetail();updateHUD();}
+  } else if(action==='add_finance'){
     const site=findSite(data.site_name)||sites[0];
-    if (site) try {
-      const[f]=await api('POST','finance_entries',{action:'insert',data:{site_id:site.id,type:data.type,description:data.description||'',amount:Number(data.amount)||0}});
-      financeEntries.push(f); renderSiteDetail(); renderFactory();
-    } catch(e){showToast('Finance entry failed','error');}
+    if(site)try{const[f]=await api('POST','finance_entries',{action:'insert',data:{site_id:site.id,type:data.type,description:data.description||'',amount:Number(data.amount)||0}});financeEntries.push(f);saveCache();renderSiteDetail();renderFactory();}catch(e){showToast('Finance entry failed','error');}
   }
 }
 
-
-// ── DELETE FUNCTIONS ──
+// ── EDIT / DELETE ──
 function openEditItem(item) {
   document.getElementById('ai-site-id').value=item.site_id;
   document.getElementById('ai-item-id').value=item.id;
   document.getElementById('ai-item-type').value=item.type;
-  document.getElementById('addItemTitle').textContent=item.type==='purchase'?'Edit Purchase':'Edit Task';
+  document.getElementById('addItemTitle').textContent=item.type==='purchase'?'Edit Purchase':item.type==='material'?'Edit Material':'Edit Task';
   document.getElementById('ai-submit-btn').textContent='Save';
   document.getElementById('ai-title').value=item.title||'';
   document.getElementById('ai-date').value=item.due_date?(item.due_date.includes('T')?item.due_date.split('T')[0]:item.due_date):'';
   document.getElementById('ai-vendor').value=item.vendor||'';
   document.getElementById('ai-amount').value=item.amount||'';
+  document.getElementById('ai-date-section').style.display=item.type==='material'?'none':'block';
+  document.getElementById('ai-emp-section').style.display=item.type==='material'?'none':'block';
   document.getElementById('ai-purchase-fields').style.display=item.type==='purchase'?'block':'none';
+  document.getElementById('ai-material-fields').style.display=item.type==='material'?'block':'none';
+  document.getElementById('ai-qty').value=item.type==='material'?(item.vendor||''):'';
   const g=document.getElementById('ai-emp-grid');
   const assigned=(item.assigned_to||'').split(',').filter(Boolean);
   selectedItemEmps=[...assigned];
@@ -1409,37 +1564,37 @@ function openEditFinance(entry) {
 }
 
 async function deleteItem(id) {
-  if (!confirm('Delete this item?')) return;
+  if(!confirm('Delete this item?'))return;
   try {
     await api('POST','items',{action:'delete',id});
     items=items.filter(i=>i.id!==id);
-    renderSiteDetail(); renderFactory(); updateHUD(); renderCalendar();
+    saveCache();renderSiteDetail();renderFactory();updateHUD();renderCalendar();
     showToast('Deleted','info');
   } catch(e){showToast('Failed','error');}
 }
 
 async function deleteFinanceEntry(id) {
-  if (!confirm('Delete this entry?')) return;
+  if(!confirm('Delete this entry?'))return;
   try {
     await api('POST','finance_entries',{action:'delete',id});
     financeEntries=financeEntries.filter(f=>f.id!==id);
-    renderSiteDetail(); renderFactory();
+    saveCache();renderSiteDetail();renderFactory();
     showToast('Entry deleted','info');
   } catch(e){showToast('Failed','error');}
 }
 
 async function deleteVisit(id) {
-  if (!confirm('Delete this visit?')) return;
+  if(!confirm('Delete this visit?'))return;
   try {
     await api('POST','visits',{action:'delete',id});
     visits=visits.filter(v=>v.id!==id);
-    renderProspects();
+    saveCache();renderProspects();
     showToast('Visit deleted','info');
   } catch(e){showToast('Failed','error');}
 }
 
-// ── RENAME FUNCTIONS ──
-function openRename(type, id, currentName) {
+// ── RENAME ──
+function openRename(type,id,currentName) {
   document.getElementById('rename-type').value=type;
   document.getElementById('rename-id').value=id;
   document.getElementById('rename-val').value=currentName;
@@ -1451,77 +1606,27 @@ async function submitRename() {
   const type=document.getElementById('rename-type').value;
   const id=document.getElementById('rename-id').value;
   const name=document.getElementById('rename-val').value.trim();
-  if (!name){showToast('Enter a name','error');return;}
+  if(!name){showToast('Enter a name','error');return;}
   try {
     const table=type==='site'?'sites':'employees';
     await api('POST',table,{action:'update',id,data:{name}});
-    if (type==='site'){const s=sites.find(x=>x.id===id);if(s)s.name=name;renderSiteChips();renderSiteDetail();renderSettingsSites();}
-    else {const e=employees.find(x=>x.id===id);if(e)e.name=name;renderSettingsEmployees();}
-    closeModal('modalRename');
-    showToast('Renamed ✓','success');
+    if(type==='site'){const s=sites.find(x=>x.id===id);if(s)s.name=name;renderSiteChips();renderSiteDetail();renderSettingsSites();}
+    else{const e=employees.find(x=>x.id===id);if(e)e.name=name;renderSettingsEmployees();}
+    saveCache();closeModal('modalRename');showToast('Renamed ✓','success');
   } catch(e){showToast('Failed: '+e.message,'error');}
 }
 
 async function restoreSite(id) {
   try {
     await api('POST','sites',{action:'update',id,data:{status:'active'}});
-    const s=sites.find(x=>x.id===id); if(s) s.status='active';
-    renderSiteChips(); renderSiteDetail(); renderSettingsSites(); updateHUD();
+    const s=sites.find(x=>x.id===id);if(s)s.status='active';
+    saveCache();renderSiteChips();renderSiteDetail();renderSettingsSites();updateHUD();
     showToast('Site restored','success');
   } catch(e){showToast('Failed','error');}
 }
 
-// ── SWIPE TO DELETE ──
-const _swipe={};
-function swipeStart(e,id){
-  _swipe[id]={x:e.touches[0].clientX,moved:false};
-}
-function swipeMove(e,id){
-  if(!_swipe[id])return;
-  const dx=e.touches[0].clientX-_swipe[id].x;
-  if(dx<-5){
-    _swipe[id].moved=true;
-    const el=document.getElementById('swf-'+id);
-    if(el){const t=Math.max(dx,-70);el.style.transform=`translateX(${t}px)`;el.style.transition='none';}
-    e.preventDefault();
-  }
-}
-function swipeEnd(e,id,deleteFn){
-  if(!_swipe[id])return;
-  const el=document.getElementById('swf-'+id);
-  if(el){
-    el.style.transition='transform .22s ease';
-    const dx=e.changedTouches[0].clientX-_swipe[id].x;
-    if(dx<-55){el.style.transform='translateX(-70px)';setTimeout(()=>deleteFn(),200);}
-    else{el.style.transform='translateX(0)';}
-  }
-  delete _swipe[id];
-}
-
-// ── TOAST ──
-function showToast(msg, type='info') {
-  const t=document.getElementById('toast');
-  const colors={success:'#4edea3',error:'#ffb4ab',info:'#89ceff'};
-  t.textContent=msg; t.style.color=colors[type]||colors.info; t.style.borderColor=(colors[type]||colors.info)+'44';
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2500);
-}
-
-// ── ADD STYLE FOR SPIN ──
-const style=document.createElement('style');
-style.textContent='@keyframes spin{to{transform:rotate(360deg);}}';
-document.head.appendChild(style);
-
 // ── INIT ──
-window.addEventListener('DOMContentLoaded',()=>{
-  // populate visit site select when modal opens
-  document.getElementById('modalAddVisit').addEventListener('click',()=>{
-    const sel=document.getElementById('av-site');
-    sel.innerHTML='<option value="">No specific site</option>'+sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-  });
-  loadAISettings();
-  loadAll();
-});
+loadAll();
 </script>
 </body>
 </html>
